@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::iter::successors;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -15,7 +15,7 @@ pub enum Cell {
     Start,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Move {
     Up,
     Down,
@@ -23,7 +23,7 @@ pub enum Move {
     Right,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub struct Path {
     moves: Vec<Move>,
     start_pos: Point,
@@ -194,17 +194,17 @@ impl Grid {
     // Find nearest cell of a given type
     pub fn nearest(&self, src: Point, cell: Cell) -> (Point, Path) {
         let mut visited = vec![false; self.data.len()];
-        let mut queue = vec![src];
+        let mut queue = VecDeque::from([src]);
         let mut moves = vec![Vec::<Move>::new(); self.data.len()];
         visited[src.y * self.stride + src.x] = true;
-        while let Some(p) = queue.pop() {
+        while let Some(p) = queue.pop_front() {
             for n in self.neighbours(p) {
                 let idx = n.y * self.stride + n.x;
                 if visited[idx] {
                     continue;
                 }
                 visited[idx] = true;
-                queue.push(n);
+                queue.push_back(n);
                 moves[idx] = moves[p.y * self.stride + p.x].clone();
                 moves[idx].push(
                     match (n.x as isize - p.x as isize, n.y as isize - p.y as isize) {
@@ -297,17 +297,18 @@ impl Grid {
 
     pub fn pathfind_optimal(&self, src: Point, dst: Point) -> Path {
         let mut visited = vec![false; self.data.len()];
-        let mut queue = vec![src];
+        let mut queue = VecDeque::from([src]);
         let mut moves = vec![Vec::<Move>::new(); self.data.len()];
         visited[src.y * self.stride + src.x] = true;
-        while let Some(p) = queue.pop() {
+        while let Some(p) = queue.pop_front() {
             for n in self.neighbours(p) {
+                // Neighbours exclude walls
                 let idx = n.y * self.stride + n.x;
-                if visited[idx] || self.data[idx] == Cell::Wall {
+                if visited[idx] {
                     continue;
                 }
                 visited[idx] = true;
-                queue.push(n);
+                queue.push_back(n);
                 moves[idx] = moves[p.y * self.stride + p.x].clone();
                 moves[idx].push(
                     match (n.x as isize - p.x as isize, n.y as isize - p.y as isize) {
