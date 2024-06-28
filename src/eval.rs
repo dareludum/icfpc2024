@@ -20,7 +20,7 @@ fn evaluate_node(tree: Rc<Node>) -> Rc<Node> {
                 Node::Lambda { var, body } => {
                     evaluate_node(substitute(body.clone(), *var, value.clone()))
                 }
-                _ => node,
+                _ => panic!("Invalid application"),
             }
         }
         Node::BinaryOp { op, left, right } => {
@@ -96,7 +96,10 @@ fn substitute(node: Rc<Node>, var: VarId, value: Rc<Node>) -> Rc<Node> {
         Node::Value(_) => node,
         Node::Lambda { var: v, body } => {
             if *v != var {
-                substitute(body.clone(), var, value)
+                Rc::new(Node::Lambda {
+                    var: *v,
+                    body: substitute(body.clone(), var, value),
+                })
             } else {
                 node
             }
@@ -139,7 +142,7 @@ mod tests {
 
     use crate::{
         ast::{BinaryOp, VarId},
-        lexer::{self, Token},
+        lexer::Token,
         parser::parse,
     };
 
