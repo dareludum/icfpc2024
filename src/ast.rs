@@ -1,4 +1,4 @@
-use std::{fmt::Display, rc::Rc};
+use std::{fmt::Display, io::Write, rc::Rc};
 
 use display_tree::{AsTree, DisplayTree};
 
@@ -141,7 +141,7 @@ pub enum Node {
 }
 
 impl Node {
-    pub fn print(&self) {
-        println!("{}", AsTree::new(self))
+    pub fn print(&self, f: &mut dyn std::io::Write) -> Result<(), std::io::Error> {
+        writeln!(f, "{}", AsTree::new(self))
     }
 }

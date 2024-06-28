@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{stdin, Read, Write};
 
 use lexer::Token;
 use logos::Logos;
@@ -24,7 +24,6 @@ struct CliArgs {
 #[argh(subcommand)]
 enum CliSubcommands {
     Eval(EvalCommand),
-    AstPrint(AstPrintCommand),
     Comm(CommCommand),
 }
 
@@ -32,18 +31,21 @@ enum CliSubcommands {
 /// Evaluate a program
 #[argh(subcommand, name = "eval")]
 struct EvalCommand {
-    #[argh(positional)]
-    /// the program
-    program: String,
-}
+    #[argh(switch, short = 'p')]
+    /// print the program's ast
+    print: bool,
 
-#[derive(FromArgs, PartialEq, Debug)]
-/// Print the ast of a program
-#[argh(subcommand, name = "ast-print")]
-struct AstPrintCommand {
+    #[argh(switch, short = 'f')]
+    /// the program is in a file
+    file: bool,
+
     #[argh(positional)]
-    /// the program
-    program: String,
+    /// the program, either directly as the argument of as a file path, if -f is given
+    program: Option<String>,
+
+    #[argh(option, short = 'o')]
+    /// a file to write the output to
+    output: Option<String>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -51,16 +53,50 @@ struct AstPrintCommand {
 #[argh(subcommand, name = "comm")]
 struct CommCommand {}
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let args: CliArgs = argh::from_env();
     match args.subcommand {
-        CliSubcommands::Eval(EvalCommand { program }) => {
-            todo!()
-        }
-        CliSubcommands::AstPrint(AstPrintCommand { program }) => {
+        CliSubcommands::Eval(EvalCommand {
+            program,
+            print,
+            file,
+            output,
+        }) => {
+            // read the program input
+            let program = if let Some(program) = program {
+                if file {
+                    std::fs::read_to_string(program)?
+                } else {
+                    program
+                }
+            } else {
+                let mut program = String::new();
+                stdin().lock().read_to_string(&mut program)?;
+                program
+            };
+
+            // setup the output file, if any
+            let mut outfile = if let Some(output) = output {
+                Some(std::fs::File::create(&output)?)
+            } else {
+                None
+            };
+            let outstream: &mut dyn std::io::Write = if let Some(outfile) = outfile.as_mut() {
+                outfile
+            } else {
+                &mut std::io::stdout().lock()
+            };
+
+            // parse the AST
             let mut lexer = Token::lexer(&program);
             let ast = parse(&mut lexer).unwrap();
-            ast.print();
+
+            if print {
+                ast.print(outstream)?;
+            } else {
+                let res = eval::evaluate(ast);
+                writeln!(outstream, "{}", res)?;
+            }
         }
         CliSubcommands::Comm(_) => loop {
             print!("icfp> ");
@@ -85,5 +121,6 @@ fn main() {
                 None => println!("Failed to send message"),
             }
         },
-    }
+    };
+    Ok(())
 }
