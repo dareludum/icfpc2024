@@ -16,13 +16,16 @@ pub fn naive_solution(mut grid: Grid) -> Path {
     path
 }
 
-pub fn bfs_shortest_path_solution(mut grid: Grid) -> Path {
+// Gets out of control after 2nd problem
+pub fn bfs_shortest_path_solution(grid: Grid) -> Path {
     let fruit_cells: HashSet<Point> = grid
         .iterate_cells()
         .filter(|(_, cell)| *cell == Cell::Fruit)
         .map(|(point, _)| point)
         .collect();
 
+    // Every time a cell is visited, all the fruits collected along the path are stored in this hashset.
+    // If a cell is visited with an already visited set/subset of fruits, the path is not explored further.
     let mut visited_cells: HashMap<Point, HashSet<Vec<Point>>> = grid
         .iterate_cells()
         .map(|(point, _)| (point, HashSet::new()))
@@ -32,17 +35,25 @@ pub fn bfs_shortest_path_solution(mut grid: Grid) -> Path {
     queue.push_back((grid.start_post(), Vec::new(), Path::new(grid.start_post())));
     while !queue.is_empty() {
         let (point, mut visited, path) = queue.pop_front().unwrap();
-        if fruit_cells.contains(&point) {
+        if fruit_cells.contains(&point) && !visited.contains(&point) {
             visited.push(point);
+            visited.sort();
         }
 
         if visited.len() == fruit_cells.len() {
             return path;
         }
 
-        let cell_visited = visited_cells.get(&point).unwrap_or(&HashSet::new()).clone();
+        let cell_visited = visited_cells.get_mut(&point).unwrap();
         if cell_visited.contains(&visited) {
             continue;
+        } else {
+            // let mut sub_visited = visited.clone();
+            // while sub_visited.len() > 0 && !cell_visited.contains(&sub_visited) {
+            //     cell_visited.insert(sub_visited.clone());
+            //     sub_visited.pop();
+            // }
+            cell_visited.insert(visited.clone());
         }
 
         visited_cells
