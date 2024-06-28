@@ -169,10 +169,6 @@ impl Grid {
         self.start_pos
     }
 
-    pub fn dist(&self, src: Point, dst: Point) -> usize {
-        max(src.x, dst.x) - min(src.x, dst.x) + max(src.y, dst.y) - min(src.y, dst.y)
-    }
-
     pub fn count(&self, cell: Cell) -> usize {
         self.data.iter().filter(|&&c| c == cell).count()
     }
@@ -289,6 +285,48 @@ impl Grid {
             res.push('\n');
         }
         res
+    }
+
+    pub fn iterate_cells<'a>(&'a self) -> impl Iterator<Item = (Point, Cell)> + 'a {
+        (0..self.data.len()).map(move |i| {
+            let x = i % self.stride;
+            let y = i / self.stride;
+            (Point { x, y }, self.data[i])
+        })
+    }
+
+    pub fn pathfind_optimal(&self, src: Point, dst: Point) -> Path {
+        let mut visited = vec![false; self.data.len()];
+        let mut queue = vec![src];
+        let mut moves = vec![Vec::<Move>::new(); self.data.len()];
+        visited[src.y * self.stride + src.x] = true;
+        while let Some(p) = queue.pop() {
+            for n in self.neighbours(p) {
+                let idx = n.y * self.stride + n.x;
+                if visited[idx] || self.data[idx] == Cell::Wall {
+                    continue;
+                }
+                visited[idx] = true;
+                queue.push(n);
+                moves[idx] = moves[p.y * self.stride + p.x].clone();
+                moves[idx].push(
+                    match (n.x as isize - p.x as isize, n.y as isize - p.y as isize) {
+                        (-1, 0) => Move::Left,
+                        (1, 0) => Move::Right,
+                        (0, -1) => Move::Up,
+                        (0, 1) => Move::Down,
+                        _ => panic!("invalid move"),
+                    },
+                );
+                if n == dst {
+                    return Path {
+                        moves: moves[idx].clone(),
+                        start_pos: src,
+                    };
+                }
+            }
+        }
+        panic!("no path found");
     }
 }
 
