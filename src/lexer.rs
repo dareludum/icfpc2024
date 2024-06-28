@@ -13,7 +13,7 @@ pub enum Token {
     False,
     #[regex("I[\u{0021}-\u{007E}]+", integer)]
     Integer(u64),
-    #[regex("S[\u{0021}-\u{007E}]+", string)]
+    #[regex("S[\u{0021}-\u{007E}]*", string)]
     String(String),
 
     #[token("U-")]
@@ -165,5 +165,12 @@ mod tests {
         assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(3));
         assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(2));
         assert_eq!(lex.next().unwrap().unwrap(), Token::Variable(23));
+    }
+
+    #[test]
+    fn lambdaman10() {
+        let lex = Token::lexer("B. SF B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I;Y S B. ? B= B% v# IS I! S~ S B. ? B= B% v# I, I! Sa Sl B$ v\" B+ v# I\" I\"");
+        lex.collect::<Result<Vec<_>, _>>()
+            .expect("Failed to lex the program");
     }
 }
