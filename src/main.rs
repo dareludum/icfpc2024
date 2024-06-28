@@ -77,7 +77,7 @@ fn main() -> std::io::Result<()> {
 
             // setup the output file, if any
             let outstream: &mut dyn std::io::Write = if let Some(output) = output {
-                &mut std::fs::File::create(&output)?
+                &mut std::fs::File::create(output)?
             } else {
                 &mut std::io::stdout().lock()
             };
