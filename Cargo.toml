@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-logos = "0.14.0"
+logos = "0.14"
+oxhttp = { version = "0.2", features = ["native-tls"] }
+text_io = "0.1"
