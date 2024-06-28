@@ -22,7 +22,7 @@ fn main() {
                     .expect("Failed to lex response");
                 if tokens.len() == 1 {
                     if let lexer::Token::String(s) = &tokens[0] {
-                        print!("{}", s);
+                        println!("{}", s);
                     } else {
                         println!("Single raw token: {:?}", tokens[0]);
                     }
