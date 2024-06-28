@@ -136,7 +136,7 @@ fn main() -> std::io::Result<()> {
     };
     Ok(())
 }
-use lambdaman::{graph::naive_path, model::{to_lambdaman_path, Grid}};
+use lambdaman::{graph::bfs_shortest_path_solution, model::{to_lambdaman_path, Grid}};
 fn send_receive_single_command(command: String, print_raw_response: bool, add_newline: bool) {
     match comms::send(command.clone()) {
         Some(response) => {
@@ -154,7 +154,7 @@ fn send_receive_single_command(command: String, print_raw_response: bool, add_ne
 
                         if command.starts_with("get lambdaman") && command.len() > 13 {
                             let mut grid = Grid::new(&s);
-                            let path = naive_path(grid.clone());
+                            let path = bfs_shortest_path_solution(grid.clone());
                             println!("Path: {}\n", to_lambdaman_path(&path));
 
                             for (p,_) in path.iter_positions() {
