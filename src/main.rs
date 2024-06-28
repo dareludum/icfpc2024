@@ -1,16 +1,20 @@
 use std::io::{stdin, Read, Write};
 
+use ast::Value;
 use lexer::Token;
 use logos::Logos;
 use parser::parse;
 use text_io::read;
 
 mod ast;
+mod base94;
 mod comms;
 mod eval;
 mod lexer;
 mod parser;
 mod lambdaman;
+mod runner;
+mod serializer;
 
 use argh::FromArgs;
 
@@ -26,6 +30,7 @@ struct CliArgs {
 enum CliSubcommands {
     Eval(EvalCommand),
     Comm(CommCommand),
+    Solve(runner::SolveCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -47,12 +52,23 @@ struct EvalCommand {
     #[argh(option, short = 'o')]
     /// a file to write the output to
     output: Option<String>,
+
+    #[argh(switch, short = 'r')]
+    /// print raw token values (no newline, no quotes, etc.)
+    raw: bool,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Communicate
 #[argh(subcommand, name = "comm")]
-struct CommCommand {}
+struct CommCommand {
+    #[argh(option, short = 'm')]
+    /// the message to send
+    message: Option<String>,
+    #[argh(switch, short = 'r')]
+    /// whether to print the raw response or try to parse it
+    raw_response: bool,
+}
 
 fn main() -> std::io::Result<()> {
     let args: CliArgs = argh::from_env();
@@ -62,6 +78,7 @@ fn main() -> std::io::Result<()> {
             print,
             file,
             output,
+            raw,
         }) => {
             // read the program input
             let program = if let Some(program) = program {
@@ -88,35 +105,66 @@ fn main() -> std::io::Result<()> {
             let ast = parse(&mut lexer).unwrap();
 
             if print {
-                ast.print(outstream)?;
+                ast.pretty_print(outstream)?;
             } else {
                 let res = eval::evaluate(ast);
-                writeln!(outstream, "{}", res)?;
+                if raw {
+                    match res {
+                        Value::Bool(b) => write!(outstream, "{}", b)?,
+                        Value::Int(i) => write!(outstream, "{}", i)?,
+                        Value::Str(s) => write!(outstream, "{}", s)?,
+                    }
+                } else {
+                    writeln!(outstream, "{}", res)?;
+                }
             }
         }
-        CliSubcommands::Comm(_) => loop {
-            print!("icfp> ");
-            std::io::stdout().flush().unwrap();
-            let message: String = read!("{}\n");
-            match comms::send(message.clone()) {
-                Some(response) => {
+        CliSubcommands::Comm(cmd) => {
+            if let Some(message) = cmd.message {
+                send_receive_single_command(message, cmd.raw_response, false);
+            } else {
+                loop {
+                    print!("icfp> ");
                     std::io::stdout().flush().unwrap();
-                    let tokens = lexer::Token::lexer(&response)
-                        .collect::<Result<Vec<_>, _>>()
-                        .expect("Failed to lex response");
-                    if tokens.len() == 1 {
-                        if let lexer::Token::String(s) = &tokens[0] {
-                            println!("{}", s);
-                        } else {
-                            println!("Single raw token: {:?}", tokens[0]);
-                        }
-                    } else {
-                        println!("{}", response);
-                    }
+                    let message: String = read!("{}\n");
+                    send_receive_single_command(message, cmd.raw_response, true);
+                    std::io::stdout().flush().unwrap();
                 }
-                None => println!("Failed to send message"),
             }
-        },
+        }
+        CliSubcommands::Solve(cmd) => cmd.run(),
     };
     Ok(())
+}
+
+fn send_receive_single_command(command: String, print_raw_response: bool, add_newline: bool) {
+    match comms::send(command) {
+        Some(response) => {
+            if print_raw_response {
+                println!("{}", response);
+                return;
+            }
+            let tokens = lexer::Token::lexer(&response)
+                .collect::<Result<Vec<_>, _>>()
+                .expect("Failed to lex response");
+            if tokens.len() == 1 {
+                if let lexer::Token::String(s) = &tokens[0] {
+                    if add_newline {
+                        println!("{}", s);
+                    } else {
+                        print!("{}", s);
+                    }
+                } else {
+                    eprintln!("Single raw token: {:?}", tokens[0]);
+                }
+            } else {
+                if add_newline {
+                    println!("{}", response);
+                } else {
+                    print!("{}", response);
+                }
+            }
+        }
+        None => eprintln!("Failed to send message"),
+    }
 }

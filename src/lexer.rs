@@ -1,4 +1,8 @@
+use std::fmt::Write;
+
 use logos::{Lexer, Logos};
+
+use crate::base94::{base94_to_int, base94_to_str};
 
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip r" ")]
@@ -9,7 +13,7 @@ pub enum Token {
     False,
     #[regex("I[\u{0021}-\u{007E}]+", integer)]
     Integer(u64),
-    #[regex("S[\u{0021}-\u{007E}]+", string)]
+    #[regex("S[\u{0021}-\u{007E}]*", string)]
     String(String),
 
     #[token("U-")]
@@ -59,59 +63,57 @@ pub enum Token {
     Variable(u64),
 }
 
-fn integer(lex: &mut Lexer<Token>) -> Option<u64> {
-    from_base94(&lex.slice()[1..])
-}
-
-pub fn from_base94(s: &str) -> Option<u64> {
-    let mut result = 0u64;
-    let mut power = 1u64;
-    const BASE: u64 = 94;
-    for c in s.chars().rev() {
-        let digit = c as u64 - 33; // Subtract 33 to convert from ASCII to base-94
-        if digit >= BASE {
-            return None; // Invalid character
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Token::True => f.write_char('T'),
+            Token::False => f.write_char('F'),
+            Token::UnaryMinus => f.write_str("U-"),
+            Token::UnaryNot => f.write_str("U!"),
+            Token::StringToInt => f.write_str("U#"),
+            Token::IntToString => f.write_str("U$"),
+            Token::Add => f.write_str("B+"),
+            Token::Subtract => f.write_str("B-"),
+            Token::Multiply => f.write_str("B*"),
+            Token::Divide => f.write_str("B/"),
+            Token::Modulo => f.write_str("B%"),
+            Token::LessThan => f.write_str("B<"),
+            Token::GreaterThan => f.write_str("B>"),
+            Token::Equal => f.write_str("B="),
+            Token::Or => f.write_str("B|"),
+            Token::And => f.write_str("B&"),
+            Token::StringConcat => f.write_str("B."),
+            Token::Take => f.write_str("BT"),
+            Token::Drop => f.write_str("BD"),
+            Token::Apply => f.write_str("B$"),
+            Token::If => f.write_char('?'),
+            Token::Lambda(val) => {
+                f.write_char('L')?;
+                f.write_str(&crate::base94::int_to_base94(*val))
+            }
+            Token::Variable(val) => {
+                f.write_char('v')?;
+                f.write_str(&crate::base94::int_to_base94(*val))
+            }
+            Token::Integer(val) => {
+                f.write_char('I')?;
+                f.write_str(&crate::base94::int_to_base94(*val))
+            }
+            Token::String(val) => {
+                f.write_char('S')?;
+                f.write_str(&&crate::base94::str_to_base94(&val))
+            }
         }
-        result += digit * power;
-        power *= BASE;
     }
-    Some(result)
 }
 
-pub fn to_base94(s: u64) -> String {
-    let mut result = String::new();
-    let mut slice = s;
-    const BASE: u64 = 94;
-    while slice > 0 {
-        let digit = slice % BASE;
-        result.push((digit + 33) as u8 as char); // Add 33 to convert from base-94 to ASCII
-        slice /= BASE;
-    }
-    result.chars().rev().collect()
+fn integer(lex: &mut Lexer<Token>) -> Option<u64> {
+    base94_to_int(&lex.slice()[1..])
 }
 
 fn string(lex: &mut Lexer<Token>) -> String {
     let slice = &lex.slice()[1..];
-    map_string(slice)
-}
-
-const MAPPING: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n";
-
-pub fn map_string(s: &str) -> String {
-    let mut bytes = vec![];
-    for c in s.chars() {
-        bytes.push(MAPPING.as_bytes()[c as usize - 33]);
-    }
-    unsafe { String::from_utf8_unchecked(bytes) }
-}
-
-pub fn unmap_string(s: &str) -> String {
-    let mut bytes = vec![];
-    for c in s.chars() {
-        let idx = MAPPING.find(c).unwrap();
-        bytes.push((idx + 33) as u8);
-    }
-    unsafe { String::from_utf8_unchecked(bytes) }
+    base94_to_str(slice)
 }
 
 #[cfg(test)]
@@ -163,5 +165,12 @@ mod tests {
         assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(3));
         assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(2));
         assert_eq!(lex.next().unwrap().unwrap(), Token::Variable(23));
+    }
+
+    #[test]
+    fn lambdaman10() {
+        let lex = Token::lexer("B. SF B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I;Y S B. ? B= B% v# IS I! S~ S B. ? B= B% v# I, I! Sa Sl B$ v\" B+ v# I\" I\"");
+        lex.collect::<Result<Vec<_>, _>>()
+            .expect("Failed to lex the program");
     }
 }
