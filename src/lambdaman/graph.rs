@@ -1,8 +1,9 @@
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use super::model::{Cell, Grid, Path, Point};
 
 // Naive go to the nearest fruit algorithm
+#[allow(dead_code)]
 pub fn naive_solution(mut grid: Grid) -> Path {
     let fruits = grid.count(Cell::Fruit);
     let mut path = Path::new(grid.start_post());
@@ -17,6 +18,7 @@ pub fn naive_solution(mut grid: Grid) -> Path {
 }
 
 // Gets out of control after 2nd problem
+#[allow(dead_code)]
 pub fn bfs_shortest_path_solution(grid: Grid) -> Path {
     let fruit_cells: HashSet<Point> = grid
         .iterate_cells()

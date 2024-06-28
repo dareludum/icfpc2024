@@ -333,22 +333,7 @@ impl ToString for Grid {
     }
 }
 
-fn max(a: usize, b: usize) -> usize {
-    if a > b {
-        a
-    } else {
-        b
-    }
-}
-
-fn min(a: usize, b: usize) -> usize {
-    if a < b {
-        a
-    } else {
-        b
-    }
-}
-
+#[allow(dead_code)]
 pub fn to_lambdaman_path(path: &Path) -> String {
     path.iter_moves()
         .map(|m| match m {
