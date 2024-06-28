@@ -10,6 +10,7 @@ mod comms;
 mod eval;
 mod lexer;
 mod parser;
+mod runner;
 
 use argh::FromArgs;
 
@@ -25,6 +26,7 @@ struct CliArgs {
 enum CliSubcommands {
     Eval(EvalCommand),
     Comm(CommCommand),
+    Solve(runner::SolveCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -116,6 +118,7 @@ fn main() -> std::io::Result<()> {
                 None => println!("Failed to send message"),
             }
         },
+        CliSubcommands::Solve(cmd) => cmd.run(),
     };
     Ok(())
 }
