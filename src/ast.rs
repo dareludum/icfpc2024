@@ -1,13 +1,13 @@
 use std::rc::Rc;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Value {
     Str(String),
     Int(i64),
     Bool(bool),
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct VarId(u64);
 
 impl VarId {
@@ -18,7 +18,7 @@ impl VarId {
 
 pub type NodeRef = Rc<Node>;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BinaryOp {
     IntAdd,
     IntSub,
@@ -35,7 +35,7 @@ pub enum BinaryOp {
     Eq,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UnuaryOp {
     IntNeg,
     BoolNot,
@@ -43,7 +43,7 @@ pub enum UnuaryOp {
     IntToStr,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Node {
     Value(Value),
     // even though lambda and apply technically are unuary / binary operators,

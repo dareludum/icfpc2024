@@ -5,6 +5,7 @@ use text_io::read;
 
 mod ast;
 mod comms;
+mod eval;
 mod lexer;
 mod parser;
 
