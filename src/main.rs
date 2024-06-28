@@ -136,9 +136,9 @@ fn main() -> std::io::Result<()> {
     };
     Ok(())
 }
-
+use lambdaman::{graph::naive_path, model::{to_lambdaman_path, Grid}};
 fn send_receive_single_command(command: String, print_raw_response: bool, add_newline: bool) {
-    match comms::send(command) {
+    match comms::send(command.clone()) {
         Some(response) => {
             if print_raw_response {
                 println!("{}", response);
@@ -151,6 +151,21 @@ fn send_receive_single_command(command: String, print_raw_response: bool, add_ne
                 if let lexer::Token::String(s) = &tokens[0] {
                     if add_newline {
                         println!("{}", s);
+
+                        if command.starts_with("get lambdaman") && command.len() > 13 {
+                            let mut grid = Grid::new(&s);
+                            let path = naive_path(grid.clone());
+                            println!("Path: {}\n", to_lambdaman_path(&path));
+
+                            for (p,_) in path.iter_positions() {
+                                let i:String = read!("{}\n");
+                                if i == "q" {
+                                    break;
+                                }
+                                println!("{}\n", grid.print_highlight_cell_to_string(p));
+                                grid.set(p, lambdaman::model::Cell::Empty);
+                            }
+                        }
                     } else {
                         print!("{}", s);
                     }
