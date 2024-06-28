@@ -173,20 +173,20 @@ impl Grid {
         self.data.iter().filter(|&&c| c == cell).count()
     }
 
-    pub fn neighbours(&self, p: Point) -> Vec<Point> {
+    pub fn neighbours(&self, p: Point) -> Vec<(Point, Move)> {
         // caching? trait?
         let mut res = Vec::new();
         if p.x > 0 && self.internal_get(p.x - 1, p.y) != Cell::Wall {
-            res.push(Point { x: p.x - 1, y: p.y });
+            res.push((Point { x: p.x - 1, y: p.y }, Move::Left));
         }
         if p.x + 1 < self.width && self.internal_get(p.x + 1, p.y) != Cell::Wall {
-            res.push(Point { x: p.x + 1, y: p.y });
+            res.push((Point { x: p.x + 1, y: p.y }, Move::Right));
         }
         if p.y > 0 && self.internal_get(p.x, p.y - 1) != Cell::Wall {
-            res.push(Point { x: p.x, y: p.y - 1 });
+            res.push((Point { x: p.x, y: p.y - 1 }, Move::Up));
         }
         if p.y + 1 < self.height && self.internal_get(p.x, p.y + 1) != Cell::Wall {
-            res.push(Point { x: p.x, y: p.y + 1 });
+            res.push((Point { x: p.x, y: p.y + 1 }, Move::Down));
         }
         res
     }
@@ -198,7 +198,7 @@ impl Grid {
         let mut moves = vec![Vec::<Move>::new(); self.data.len()];
         visited[src.y * self.stride + src.x] = true;
         while let Some(p) = queue.pop_front() {
-            for n in self.neighbours(p) {
+            for (n, m) in self.neighbours(p) {
                 let idx = n.y * self.stride + n.x;
                 if visited[idx] {
                     continue;
@@ -206,15 +206,7 @@ impl Grid {
                 visited[idx] = true;
                 queue.push_back(n);
                 moves[idx] = moves[p.y * self.stride + p.x].clone();
-                moves[idx].push(
-                    match (n.x as isize - p.x as isize, n.y as isize - p.y as isize) {
-                        (-1, 0) => Move::Left,
-                        (1, 0) => Move::Right,
-                        (0, -1) => Move::Up,
-                        (0, 1) => Move::Down,
-                        _ => panic!("invalid move"),
-                    },
-                );
+                moves[idx].push(m);
                 if self.get(n) == cell {
                     return (
                         n,
@@ -301,7 +293,7 @@ impl Grid {
         let mut moves = vec![Vec::<Move>::new(); self.data.len()];
         visited[src.y * self.stride + src.x] = true;
         while let Some(p) = queue.pop_front() {
-            for n in self.neighbours(p) {
+            for (n, m) in self.neighbours(p) {
                 // Neighbours exclude walls
                 let idx = n.y * self.stride + n.x;
                 if visited[idx] {
@@ -310,15 +302,7 @@ impl Grid {
                 visited[idx] = true;
                 queue.push_back(n);
                 moves[idx] = moves[p.y * self.stride + p.x].clone();
-                moves[idx].push(
-                    match (n.x as isize - p.x as isize, n.y as isize - p.y as isize) {
-                        (-1, 0) => Move::Left,
-                        (1, 0) => Move::Right,
-                        (0, -1) => Move::Up,
-                        (0, 1) => Move::Down,
-                        _ => panic!("invalid move"),
-                    },
-                );
+                moves[idx].push(m);
                 if n == dst {
                     return Path {
                         moves: moves[idx].clone(),
