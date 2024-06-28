@@ -1,5 +1,6 @@
 use std::io::{stdin, Read, Write};
 
+use ast::Value;
 use lexer::Token;
 use logos::Logos;
 use parser::parse;
@@ -50,6 +51,10 @@ struct EvalCommand {
     #[argh(option, short = 'o')]
     /// a file to write the output to
     output: Option<String>,
+
+    #[argh(switch, short = 'r')]
+    /// print raw token values (no newline, no quotes, etc.)
+    raw: bool,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -59,6 +64,9 @@ struct CommCommand {
     #[argh(option, short = 'm')]
     /// the message to send
     message: Option<String>,
+    #[argh(switch, short = 'r')]
+    /// whether to print the raw response or try to parse it
+    raw_response: bool,
 }
 
 fn main() -> std::io::Result<()> {
@@ -69,6 +77,7 @@ fn main() -> std::io::Result<()> {
             print,
             file,
             output,
+            raw,
         }) => {
             // read the program input
             let program = if let Some(program) = program {
@@ -98,18 +107,27 @@ fn main() -> std::io::Result<()> {
                 ast.pretty_print(outstream)?;
             } else {
                 let res = eval::evaluate(ast);
-                writeln!(outstream, "{}", res)?;
+                if raw {
+                    match res {
+                        Value::Bool(b) => write!(outstream, "{}", b)?,
+                        Value::Int(i) => write!(outstream, "{}", i)?,
+                        Value::Str(s) => write!(outstream, "{}", s)?,
+                    }
+                } else {
+                    writeln!(outstream, "{}", res)?;
+                }
             }
         }
         CliSubcommands::Comm(cmd) => {
             if let Some(message) = cmd.message {
-                send_receive_single_command(message, false);
+                send_receive_single_command(message, cmd.raw_response, false);
             } else {
                 loop {
                     print!("icfp> ");
                     std::io::stdout().flush().unwrap();
                     let message: String = read!("{}\n");
-                    send_receive_single_command(message, true);
+                    send_receive_single_command(message, cmd.raw_response, true);
+                    std::io::stdout().flush().unwrap();
                 }
             }
         }
@@ -118,10 +136,13 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn send_receive_single_command(command: String, add_newline: bool) {
+fn send_receive_single_command(command: String, print_raw_response: bool, add_newline: bool) {
     match comms::send(command) {
         Some(response) => {
-            std::io::stdout().flush().unwrap();
+            if print_raw_response {
+                println!("{}", response);
+                return;
+            }
             let tokens = lexer::Token::lexer(&response)
                 .collect::<Result<Vec<_>, _>>()
                 .expect("Failed to lex response");
