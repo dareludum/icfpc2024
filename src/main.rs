@@ -10,6 +10,7 @@ mod comms;
 mod eval;
 mod lexer;
 mod parser;
+mod lambdaman;
 
 use argh::FromArgs;
 
@@ -97,7 +98,7 @@ fn main() -> std::io::Result<()> {
             print!("icfp> ");
             std::io::stdout().flush().unwrap();
             let message: String = read!("{}\n");
-            match comms::send(message) {
+            match comms::send(message.clone()) {
                 Some(response) => {
                     std::io::stdout().flush().unwrap();
                     let tokens = lexer::Token::lexer(&response)
