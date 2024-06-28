@@ -53,7 +53,11 @@ struct EvalCommand {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Communicate
 #[argh(subcommand, name = "comm")]
-struct CommCommand {}
+struct CommCommand {
+    #[argh(option, short = 'm')]
+    /// the message to send
+    message: Option<String>,
+}
 
 fn main() -> std::io::Result<()> {
     let args: CliArgs = argh::from_env();
@@ -95,30 +99,48 @@ fn main() -> std::io::Result<()> {
                 writeln!(outstream, "{}", res)?;
             }
         }
-        CliSubcommands::Comm(_) => loop {
-            print!("icfp> ");
-            std::io::stdout().flush().unwrap();
-            let message: String = read!("{}\n");
-            match comms::send(message) {
-                Some(response) => {
+        CliSubcommands::Comm(cmd) => {
+            if let Some(message) = cmd.message {
+                send_receive_single_command(message, false);
+            } else {
+                loop {
+                    print!("icfp> ");
                     std::io::stdout().flush().unwrap();
-                    let tokens = lexer::Token::lexer(&response)
-                        .collect::<Result<Vec<_>, _>>()
-                        .expect("Failed to lex response");
-                    if tokens.len() == 1 {
-                        if let lexer::Token::String(s) = &tokens[0] {
-                            println!("{}", s);
-                        } else {
-                            println!("Single raw token: {:?}", tokens[0]);
-                        }
-                    } else {
-                        println!("{}", response);
-                    }
+                    let message: String = read!("{}\n");
+                    send_receive_single_command(message, true);
                 }
-                None => println!("Failed to send message"),
             }
-        },
+        }
         CliSubcommands::Solve(cmd) => cmd.run(),
     };
     Ok(())
+}
+
+fn send_receive_single_command(command: String, add_newline: bool) {
+    match comms::send(command) {
+        Some(response) => {
+            std::io::stdout().flush().unwrap();
+            let tokens = lexer::Token::lexer(&response)
+                .collect::<Result<Vec<_>, _>>()
+                .expect("Failed to lex response");
+            if tokens.len() == 1 {
+                if let lexer::Token::String(s) = &tokens[0] {
+                    if add_newline {
+                        println!("{}", s);
+                    } else {
+                        print!("{}", s);
+                    }
+                } else {
+                    eprintln!("Single raw token: {:?}", tokens[0]);
+                }
+            } else {
+                if add_newline {
+                    println!("{}", response);
+                } else {
+                    print!("{}", response);
+                }
+            }
+        }
+        None => eprintln!("Failed to send message"),
+    }
 }
