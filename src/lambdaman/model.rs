@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::iter::successors;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Point {
     x: usize,
     y: usize,
