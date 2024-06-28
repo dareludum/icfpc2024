@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::iter::successors;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -15,7 +15,7 @@ pub enum Cell {
     Start,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Move {
     Up,
     Down,
@@ -23,7 +23,7 @@ pub enum Move {
     Right,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub struct Path {
     moves: Vec<Move>,
     start_pos: Point,
@@ -169,28 +169,24 @@ impl Grid {
         self.start_pos
     }
 
-    pub fn dist(&self, src: Point, dst: Point) -> usize {
-        max(src.x, dst.x) - min(src.x, dst.x) + max(src.y, dst.y) - min(src.y, dst.y)
-    }
-
     pub fn count(&self, cell: Cell) -> usize {
         self.data.iter().filter(|&&c| c == cell).count()
     }
 
-    pub fn neighbours(&self, p: Point) -> Vec<Point> {
+    pub fn neighbours(&self, p: Point) -> Vec<(Point, Move)> {
         // caching? trait?
         let mut res = Vec::new();
         if p.x > 0 && self.internal_get(p.x - 1, p.y) != Cell::Wall {
-            res.push(Point { x: p.x - 1, y: p.y });
+            res.push((Point { x: p.x - 1, y: p.y }, Move::Left));
         }
         if p.x + 1 < self.width && self.internal_get(p.x + 1, p.y) != Cell::Wall {
-            res.push(Point { x: p.x + 1, y: p.y });
+            res.push((Point { x: p.x + 1, y: p.y }, Move::Right));
         }
         if p.y > 0 && self.internal_get(p.x, p.y - 1) != Cell::Wall {
-            res.push(Point { x: p.x, y: p.y - 1 });
+            res.push((Point { x: p.x, y: p.y - 1 }, Move::Up));
         }
         if p.y + 1 < self.height && self.internal_get(p.x, p.y + 1) != Cell::Wall {
-            res.push(Point { x: p.x, y: p.y + 1 });
+            res.push((Point { x: p.x, y: p.y + 1 }, Move::Down));
         }
         res
     }
@@ -198,27 +194,19 @@ impl Grid {
     // Find nearest cell of a given type
     pub fn nearest(&self, src: Point, cell: Cell) -> (Point, Path) {
         let mut visited = vec![false; self.data.len()];
-        let mut queue = vec![src];
+        let mut queue = VecDeque::from([src]);
         let mut moves = vec![Vec::<Move>::new(); self.data.len()];
         visited[src.y * self.stride + src.x] = true;
-        while let Some(p) = queue.pop() {
-            for n in self.neighbours(p) {
+        while let Some(p) = queue.pop_front() {
+            for (n, m) in self.neighbours(p) {
                 let idx = n.y * self.stride + n.x;
                 if visited[idx] {
                     continue;
                 }
                 visited[idx] = true;
-                queue.push(n);
+                queue.push_back(n);
                 moves[idx] = moves[p.y * self.stride + p.x].clone();
-                moves[idx].push(
-                    match (n.x as isize - p.x as isize, n.y as isize - p.y as isize) {
-                        (-1, 0) => Move::Left,
-                        (1, 0) => Move::Right,
-                        (0, -1) => Move::Up,
-                        (0, 1) => Move::Down,
-                        _ => panic!("invalid move"),
-                    },
-                );
+                moves[idx].push(m);
                 if self.get(n) == cell {
                     return (
                         n,
@@ -289,6 +277,41 @@ impl Grid {
             res.push('\n');
         }
         res
+    }
+
+    pub fn iterate_cells<'a>(&'a self) -> impl Iterator<Item = (Point, Cell)> + 'a {
+        (0..self.data.len()).map(move |i| {
+            let x = i % self.stride;
+            let y = i / self.stride;
+            (Point { x, y }, self.data[i])
+        })
+    }
+
+    pub fn pathfind_optimal(&self, src: Point, dst: Point) -> Path {
+        let mut visited = vec![false; self.data.len()];
+        let mut queue = VecDeque::from([src]);
+        let mut moves = vec![Vec::<Move>::new(); self.data.len()];
+        visited[src.y * self.stride + src.x] = true;
+        while let Some(p) = queue.pop_front() {
+            for (n, m) in self.neighbours(p) {
+                // Neighbours exclude walls
+                let idx = n.y * self.stride + n.x;
+                if visited[idx] {
+                    continue;
+                }
+                visited[idx] = true;
+                queue.push_back(n);
+                moves[idx] = moves[p.y * self.stride + p.x].clone();
+                moves[idx].push(m);
+                if n == dst {
+                    return Path {
+                        moves: moves[idx].clone(),
+                        start_pos: src,
+                    };
+                }
+            }
+        }
+        panic!("no path found");
     }
 }
 
