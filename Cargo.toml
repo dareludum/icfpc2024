@@ -7,3 +7,5 @@ edition = "2021"
 logos = "0.14"
 oxhttp = { version = "0.2", features = ["native-tls"] }
 text_io = "0.1"
+display_tree = "1.1.2"
+argh = "0.1.12"

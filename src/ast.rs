@@ -1,4 +1,6 @@
-use std::rc::Rc;
+use std::{fmt::Display, rc::Rc};
+
+use display_tree::{AsTree, DisplayTree};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Value {
@@ -7,12 +9,28 @@ pub enum Value {
     Bool(bool),
 }
 
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Str(v) => write!(f, "{:?}", v),
+            Value::Int(v) => write!(f, "{:?}", v),
+            Value::Bool(v) => write!(f, "{:?}", v),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct VarId(u64);
 
 impl VarId {
     pub fn new(id: u64) -> Self {
         VarId(id)
+    }
+}
+
+impl Display for VarId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "VarId({})", self.0)
     }
 }
 
@@ -35,6 +53,12 @@ pub enum BinaryOp {
     Eq,
 }
 
+impl Display for BinaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UnuaryOp {
     IntNeg,
@@ -43,32 +67,58 @@ pub enum UnuaryOp {
     IntToStr,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+impl Display for UnuaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, DisplayTree)]
 pub enum Node {
-    Value(Value),
+    Value(#[node_label] Value),
     // even though lambda and apply technically are unuary / binary operators,
     // they are treated separately as they have to deal with scoping / evaluation
     Lambda {
+        #[node_label]
         var: VarId,
+        #[tree]
         body: NodeRef,
     },
     Variable(VarId),
     Apply {
+        #[tree]
         f: NodeRef,
+        #[tree]
         value: NodeRef,
     },
     BinaryOp {
+        #[node_label]
         op: BinaryOp,
+        #[tree]
         left: NodeRef,
+        #[tree]
         right: NodeRef,
     },
     UnuaryOp {
         op: UnuaryOp,
+        #[tree]
         body: NodeRef,
     },
     If {
+        #[tree]
+        #[field_label]
         cond: NodeRef,
+        #[tree]
+        #[field_label]
         then_do: NodeRef,
+        #[tree]
+        #[field_label]
         else_do: NodeRef,
     },
+}
+
+impl Node {
+    pub fn print(&self) {
+        println!("{}", AsTree::new(self))
+    }
 }

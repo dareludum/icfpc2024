@@ -4,9 +4,10 @@ use crate::{
     ast::{BinaryOp, Node, NodeRef, UnuaryOp, Value, VarId},
     lexer::Token,
 };
-use logos::{Lexer, Logos};
+use logos::Lexer;
 
-enum ParsingError {
+#[derive(Debug, Clone)]
+pub enum ParsingError {
     EmptyTokenStream,
     LexerError,
 }
@@ -46,26 +47,33 @@ pub fn parse(lexer: &mut Lexer<Token>) -> Result<NodeRef, ParsingError> {
 
         // binary
         Token::Add => parse_bin(lexer, BinaryOp::IntAdd)?,
-        Token::Subtract => parse(lexer)?,
-        Token::Multiply => parse(lexer)?,
-        Token::Divide => parse(lexer)?,
-        Token::Modulo => parse(lexer)?,
-        Token::LessThan => parse(lexer)?,
-        Token::GreaterThan => parse(lexer)?,
-        Token::Equal => parse(lexer)?,
-        Token::Or => parse(lexer)?,
-        Token::And => parse(lexer)?,
-        Token::StringConcat => parse(lexer)?,
-        Token::Take => parse(lexer)?,
-        Token::Drop => parse(lexer)?,
-        Token::Apply => parse(lexer)?,
+        Token::Subtract => parse_bin(lexer, BinaryOp::IntSub)?,
+        Token::Multiply => parse_bin(lexer, BinaryOp::IntMul)?,
+        Token::Divide => parse_bin(lexer, BinaryOp::IntDiv)?,
+        Token::Modulo => parse_bin(lexer, BinaryOp::IntMod)?,
+        Token::LessThan => parse_bin(lexer, BinaryOp::IntLt)?,
+        Token::GreaterThan => parse_bin(lexer, BinaryOp::IntGt)?,
+        Token::Equal => parse_bin(lexer, BinaryOp::Eq)?,
+        Token::Or => parse_bin(lexer, BinaryOp::BoolOr)?,
+        Token::And => parse_bin(lexer, BinaryOp::BoolAnd)?,
+        Token::StringConcat => parse_bin(lexer, BinaryOp::StrConcat)?,
+        Token::Take => parse_bin(lexer, BinaryOp::StrTake)?,
+        Token::Drop => parse_bin(lexer, BinaryOp::StrDrop)?,
 
         // flow control / scoping
-        Token::If => parse(lexer)?,
+        Token::If => Rc::new(Node::If {
+            cond: parse(lexer)?,
+            then_do: parse(lexer)?,
+            else_do: parse(lexer)?,
+        }),
         Token::Lambda(id) => Rc::new(Node::Lambda {
             var: VarId::new(id),
             body: parse(lexer)?,
         }),
         Token::Variable(id) => Rc::new(Node::Variable(VarId::new(id))),
+        Token::Apply => Rc::new(Node::Apply {
+            f: parse(lexer)?,
+            value: parse(lexer)?,
+        }),
     })
 }

@@ -30,7 +30,7 @@
         };
 
         # Rust environment
-        rustVer = fenix.packages.${system}.complete;
+        rustVer = fenix.packages.${system}.stable;
         rustChan = rustVer.withComponents [
           "cargo"
           "clippy"
