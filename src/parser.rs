@@ -35,7 +35,7 @@ pub fn parse(lexer: &mut Lexer<Token>) -> Result<NodeRef, ParsingError> {
     Ok(match token {
         // litterals
         Token::True => Rc::new(Node::Value(Value::Bool(true))),
-        Token::False => Rc::new(Node::Value(Value::Bool(true))),
+        Token::False => Rc::new(Node::Value(Value::Bool(false))),
         Token::Integer(value) => Rc::new(Node::Value(Value::Int(value as i64))),
         Token::String(value) => Rc::new(Node::Value(Value::Str(value))),
 
