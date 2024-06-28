@@ -19,7 +19,30 @@ impl Display for Value {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+impl Value {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Value::Str(s) => s,
+            _ => panic!("Expected string"),
+        }
+    }
+
+    pub fn as_int(&self) -> i64 {
+        match self {
+            Value::Int(i) => *i,
+            _ => panic!("Expected int"),
+        }
+    }
+
+    pub fn as_bool(&self) -> bool {
+        match self {
+            Value::Bool(b) => *b,
+            _ => panic!("Expected bool"),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VarId(u64);
 
 impl VarId {
