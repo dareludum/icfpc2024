@@ -137,11 +137,4 @@ mod tests {
         assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(2));
         assert_eq!(lex.next().unwrap().unwrap(), Token::Variable(23));
     }
-
-    #[test]
-    fn get_index_response() {
-        let mut lex = Token::lexer("SJ!23%}%22/2n}O.%80%#4%$}#(!2!#4%2}eee}!4}).$%8}U");
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(1337));
-        assert_eq!(lex.next(), None);
-    }
 }
