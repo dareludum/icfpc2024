@@ -1,4 +1,4 @@
-use std::{fmt::Display, io::Write, rc::Rc};
+use std::{fmt::Display, rc::Rc};
 
 use display_tree::{AsTree, DisplayTree};
 

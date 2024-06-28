@@ -76,13 +76,8 @@ fn main() -> std::io::Result<()> {
             };
 
             // setup the output file, if any
-            let mut outfile = if let Some(output) = output {
-                Some(std::fs::File::create(&output)?)
-            } else {
-                None
-            };
-            let outstream: &mut dyn std::io::Write = if let Some(outfile) = outfile.as_mut() {
-                outfile
+            let outstream: &mut dyn std::io::Write = if let Some(output) = output {
+                &mut std::fs::File::create(&output)?
             } else {
                 &mut std::io::stdout().lock()
             };
