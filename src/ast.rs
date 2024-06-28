@@ -148,9 +148,4 @@ impl Node {
     pub fn pretty_print(&self, f: &mut dyn std::io::Write) -> Result<(), std::io::Error> {
         writeln!(f, "{}", AsTree::new(self))
     }
-
-    pub fn to_string(&self) -> String {
-        // TODO: implement this, should return the ICFP code
-        "<TODO>".to_string()
-    }
 }
