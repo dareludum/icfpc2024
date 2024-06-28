@@ -6,11 +6,13 @@ use parser::parse;
 use text_io::read;
 
 mod ast;
+mod base94;
 mod comms;
 mod eval;
 mod lexer;
 mod parser;
 mod runner;
+mod serializer;
 
 use argh::FromArgs;
 
@@ -93,7 +95,7 @@ fn main() -> std::io::Result<()> {
             let ast = parse(&mut lexer).unwrap();
 
             if print {
-                ast.print(outstream)?;
+                ast.pretty_print(outstream)?;
             } else {
                 let res = eval::evaluate(ast);
                 writeln!(outstream, "{}", res)?;

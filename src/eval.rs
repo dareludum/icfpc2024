@@ -64,12 +64,14 @@ fn evaluate_node(tree: Rc<Node>) -> Rc<Node> {
                     UnuaryOp::IntNeg => Rc::new(Node::Value(Value::Int(-v.as_int()))),
                     UnuaryOp::BoolNot => Rc::new(Node::Value(Value::Bool(!v.as_bool()))),
                     UnuaryOp::StrToInt => Rc::new(Node::Value(Value::Int(
-                        crate::lexer::from_base94(&crate::lexer::unmap_string(v.as_str())).unwrap()
-                            as i64,
+                        crate::base94::base94_to_int(&crate::base94::str_to_base94(v.as_str()))
+                            .unwrap() as i64,
                     ))),
-                    UnuaryOp::IntToStr => Rc::new(Node::Value(Value::Str(
-                        crate::lexer::map_string(&crate::lexer::to_base94(v.as_int() as u64)),
-                    ))),
+                    UnuaryOp::IntToStr => {
+                        Rc::new(Node::Value(Value::Str(crate::base94::base94_to_str(
+                            &crate::base94::int_to_base94(v.as_int() as u64),
+                        ))))
+                    }
                 },
                 _ => panic!("Invalid unary operation"),
             }

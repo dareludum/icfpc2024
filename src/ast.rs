@@ -49,6 +49,10 @@ impl VarId {
     pub fn new(id: u64) -> Self {
         VarId(id)
     }
+
+    pub fn id(&self) -> u64 {
+        self.0
+    }
 }
 
 impl Display for VarId {
@@ -141,7 +145,7 @@ pub enum Node {
 }
 
 impl Node {
-    pub fn print(&self, f: &mut dyn std::io::Write) -> Result<(), std::io::Error> {
+    pub fn pretty_print(&self, f: &mut dyn std::io::Write) -> Result<(), std::io::Error> {
         writeln!(f, "{}", AsTree::new(self))
     }
 
