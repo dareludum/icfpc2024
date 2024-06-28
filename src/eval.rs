@@ -63,10 +63,13 @@ fn evaluate_node(tree: Rc<Node>) -> Rc<Node> {
                 Node::Value(v) => match op {
                     UnuaryOp::IntNeg => Rc::new(Node::Value(Value::Int(-v.as_int()))),
                     UnuaryOp::BoolNot => Rc::new(Node::Value(Value::Bool(!v.as_bool()))),
-                    UnuaryOp::StrToInt => {
-                        Rc::new(Node::Value(Value::Int(v.as_str().parse().unwrap())))
-                    }
-                    UnuaryOp::IntToStr => Rc::new(Node::Value(Value::Str(v.as_int().to_string()))),
+                    UnuaryOp::StrToInt => Rc::new(Node::Value(Value::Int(
+                        crate::lexer::from_base94(&crate::lexer::unmap_string(v.as_str())).unwrap()
+                            as i64,
+                    ))),
+                    UnuaryOp::IntToStr => Rc::new(Node::Value(Value::Str(
+                        crate::lexer::map_string(&crate::lexer::to_base94(v.as_int() as u64)),
+                    ))),
                 },
                 _ => panic!("Invalid unary operation"),
             }
@@ -171,9 +174,33 @@ mod tests {
     }
 
     #[test]
+    fn unary_string_to_int() {
+        const TASK: &str = "U# S4%34";
+        assert_eq!(
+            evaluate(parse(&mut Token::lexer(TASK)).unwrap()),
+            Value::Int(15818151)
+        );
+    }
+
+    #[test]
+    fn unary_int_to_string() {
+        const TASK: &str = "U$ I4%34";
+        assert_eq!(
+            evaluate(parse(&mut Token::lexer(TASK)).unwrap()),
+            Value::Str("test".to_string())
+        );
+    }
+
+    #[test]
     fn language_test() {
         const TASK: &str = "? B= B$ B$ B$ B$ L$ L$ L$ L# v$ I\" I# I$ I% I$ ? B= B$ L$ v$ I+ I+ ? B= BD I$ S4%34 S4 ? B= BT I$ S4%34 S4%3 ? B= B. S4% S34 S4%34 ? U! B& T F ? B& T T ? U! B| F F ? B| F T ? B< U- I$ U- I# ? B> I$ I# ? B= U- I\" B% U- I$ I# ? B= I\" B% I( I$ ? B= U- I\" B/ U- I$ I# ? B= I# B/ I( I$ ? B= I' B* I# I$ ? B= I$ B+ I\" I# ? B= U$ I4%34 S4%34 ? B= U# S4%34 I4%34 ? U! F ? B= U- I$ B- I# I& ? B= I$ B- I& I# ? B= S4%34 S4%34 ? B= F F ? B= I$ I$ ? T B. B. SM%,&k#(%#+}IEj}3%.$}z3/,6%},!.'5!'%y4%34} U$ B+ I# B* I$> I1~s:U@ Sz}4/}#,!)-}0/).43}&/2})4 S)&})3}./4}#/22%#4 S\").!29}q})3}./4}#/22%#4 S\").!29}q})3}./4}#/22%#4 S\").!29}q})3}./4}#/22%#4 S\").!29}k})3}./4}#/22%#4 S5.!29}k})3}./4}#/22%#4 S5.!29}_})3}./4}#/22%#4 S5.!29}a})3}./4}#/22%#4 S5.!29}b})3}./4}#/22%#4 S\").!29}i})3}./4}#/22%#4 S\").!29}h})3}./4}#/22%#4 S\").!29}m})3}./4}#/22%#4 S\").!29}m})3}./4}#/22%#4 S\").!29}c})3}./4}#/22%#4 S\").!29}c})3}./4}#/22%#4 S\").!29}r})3}./4}#/22%#4 S\").!29}p})3}./4}#/22%#4 S\").!29}{})3}./4}#/22%#4 S\").!29}{})3}./4}#/22%#4 S\").!29}d})3}./4}#/22%#4 S\").!29}d})3}./4}#/22%#4 S\").!29}l})3}./4}#/22%#4 S\").!29}N})3}./4}#/22%#4 S\").!29}>})3}./4}#/22%#4 S!00,)#!4)/.})3}./4}#/22%#4 S!00,)#!4)/.})3}./4}#/22%#4";
         let tree = parse(&mut Token::lexer(TASK)).unwrap();
-        assert_eq!(evaluate(tree), Value::Bool(true));
+        assert_eq!(
+            evaluate(tree),
+            Value::Str(
+                "Self-check OK, send `solve language_test 4w3s0m3` to claim points for it"
+                    .to_owned()
+            )
+        );
     }
 }

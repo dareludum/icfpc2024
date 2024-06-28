@@ -29,6 +29,7 @@ pub fn send(message: String) -> Option<String> {
     Some(body)
 }
 
+// TODO: use crate::lexer::unmap_string()
 fn encode(message: String) -> Option<Vec<u8>> {
     const MAPPING: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n";
 
