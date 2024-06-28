@@ -66,7 +66,6 @@ fn integer(lex: &mut Lexer<Token>) -> Option<u64> {
     let mut power = 1u64;
     const BASE: u64 = 94;
     for c in slice.chars().rev() {
-        println!("c: {}", c);
         let digit = c as u64 - 33; // Subtract 33 to convert from ASCII to base-94
         if digit >= BASE {
             return None; // Invalid character

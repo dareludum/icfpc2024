@@ -22,14 +22,12 @@ fn main() {
                     .expect("Failed to lex response");
                 if tokens.len() == 1 {
                     if let lexer::Token::String(s) = &tokens[0] {
-                        println!("{}", s);
+                        print!("{}", s);
                     } else {
-                        println!("{:?}", tokens[0]);
+                        println!("Single raw token: {:?}", tokens[0]);
                     }
                 } else {
-                    for token in tokens {
-                        println!("{:?}", token);
-                    }
+                    println!("{}", response);
                 }
             }
             None => println!("Failed to send message"),
