@@ -61,6 +61,8 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
     };
     let mut sim = ThreeDSimulator::new(board, a, b);
 
+    center_viewport(&sim, &mut state);
+
     #[allow(unused_assignments)]
     let mut current_sim_result = Ok(SimulationStepResult::Ok);
 
@@ -111,7 +113,10 @@ Simulation:
   W: run the simulation (small delay between steps for visual feedback)
   Shift+W: run the simulation without delay
 
-ESC: close the program
+Misc:
+  C: center the viewport
+  ?: show this help
+  ESC: close the program
 "#;
 
                 d.draw_text(HELP_TEXT, 10, 10, 18, colors::SOLARIZED_BASE0);
@@ -255,6 +260,7 @@ ESC: close the program
                         sim = ThreeDSimulator::new(board, a, b);
                         current_sim_result = Ok(SimulationStepResult::Ok);
                         state.history.clear();
+                        center_viewport(&sim, &mut state);
                         update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                     }
                 }
@@ -283,6 +289,9 @@ ESC: close the program
                         let board = sim.as_board().save();
                         std::fs::write(&filepath, board).expect("Failed to write to file");
                     }
+                }
+                KeyboardKey::KEY_C => {
+                    center_viewport(&sim, &mut state);
                 }
                 KeyboardKey::KEY_LEFT => {
                     state.selected_pos = state.selected_pos.left();
@@ -459,6 +468,25 @@ ESC: close the program
             thread::sleep(time::Duration::from_millis(delay_ms));
         }
     }
+}
+
+fn center_viewport(sim: &ThreeDSimulator, state: &mut GuiState) {
+    let mut min_x = i32::MAX;
+    let mut min_y = i32::MAX;
+    let mut max_x = i32::MIN;
+    let mut max_y = i32::MIN;
+    for pos in sim.cells().keys() {
+        min_x = min_x.min(pos.x);
+        min_y = min_y.min(pos.y);
+        max_x = max_x.max(pos.x);
+        max_y = max_y.max(pos.y);
+    }
+    let board_width = (max_x - min_x + 1) * 30;
+    let board_height = (max_y - min_y + 1) * 30;
+    state.viewport_offset = Vector2D::new(
+        (state.width - board_width) / 2 - 30,
+        (state.height - board_height) / 2 - 30,
+    );
 }
 
 fn update_window_title(
