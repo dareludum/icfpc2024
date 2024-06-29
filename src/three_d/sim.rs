@@ -4,7 +4,7 @@ use crate::geometry::Vector2D;
 
 use super::board::ThreeDBoard;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ThreeDSimulator {
     current_cells: HashMap<Vector2D, Cell>,
     history: Vec<HashMap<Vector2D, Cell>>,
@@ -17,7 +17,7 @@ pub struct ThreeDSimulator {
     a: i64,
     b: i64,
     steps_taken: u32,
-    result: Option<i64>,
+    result: SimulationStepResult,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,6 +45,7 @@ pub enum SimulationStepResult {
     Ok,
     Finished(i64),
     AlreadyFinished,
+    Error(Vector2D),
 }
 
 impl ThreeDSimulator {
@@ -82,7 +83,7 @@ impl ThreeDSimulator {
             a,
             b,
             steps_taken: 0,
-            result: None,
+            result: SimulationStepResult::Ok,
         }
     }
 
@@ -91,6 +92,9 @@ impl ThreeDSimulator {
     }
 
     pub fn score(&self) -> u32 {
+        if self.all_time_max_t == 0 {
+            return 0;
+        }
         (self.all_time_max_x - self.all_time_min_x + 1) as u32
             * (self.all_time_max_y - self.all_time_min_y + 1) as u32
             * self.all_time_max_t
@@ -120,15 +124,18 @@ impl ThreeDSimulator {
         &self.current_cells
     }
 
-    pub fn step(&mut self) -> Result<SimulationStepResult, Vector2D> {
-        if self.result.is_some() {
-            return Ok(SimulationStepResult::AlreadyFinished);
+    pub fn step(&mut self) -> SimulationStepResult {
+        match self.result {
+            SimulationStepResult::Finished(_) | SimulationStepResult::Error(_) => {
+                return SimulationStepResult::AlreadyFinished
+            }
+            _ => {}
         }
 
         self.steps_taken += 1;
         if self.steps_taken > 1_000_000 {
             // TODO: a better error
-            return Err(Vector2D::new(0, 0));
+            return self.error(Vector2D::new(0, 0));
         }
 
         if self.history.is_empty() {
@@ -152,7 +159,7 @@ impl ThreeDSimulator {
             }
 
             self.current_time += 1;
-            return Ok(SimulationStepResult::Ok);
+            return SimulationStepResult::Ok;
         }
 
         enum Action {
@@ -202,7 +209,7 @@ impl ThreeDSimulator {
                                 actions.push(Action::Write(pos.right(), res));
                                 actions.push(Action::Write(pos.down(), res));
                             }
-                            _ => return Err(*pos),
+                            _ => return self.error(*pos),
                         }
                     }
                 }
@@ -219,7 +226,7 @@ impl ThreeDSimulator {
                                 actions.push(Action::Write(pos.right(), res));
                                 actions.push(Action::Write(pos.down(), res));
                             }
-                            _ => return Err(*pos),
+                            _ => return self.error(*pos),
                         }
                     }
                 }
@@ -236,7 +243,7 @@ impl ThreeDSimulator {
                                 actions.push(Action::Write(pos.right(), res));
                                 actions.push(Action::Write(pos.down(), res));
                             }
-                            _ => return Err(*pos),
+                            _ => return self.error(*pos),
                         }
                     }
                 }
@@ -253,7 +260,7 @@ impl ThreeDSimulator {
                                 actions.push(Action::Write(pos.right(), res));
                                 actions.push(Action::Write(pos.down(), res));
                             }
-                            _ => return Err(*pos),
+                            _ => return self.error(*pos),
                         }
                     }
                 }
@@ -270,7 +277,7 @@ impl ThreeDSimulator {
                                 actions.push(Action::Write(pos.right(), res));
                                 actions.push(Action::Write(pos.down(), res));
                             }
-                            _ => return Err(*pos),
+                            _ => return self.error(*pos),
                         }
                     }
                 }
@@ -310,7 +317,7 @@ impl ThreeDSimulator {
                         match (cell_dx, cell_dy, cell_dt, cell_v) {
                             (Cell::Data(dx), Cell::Data(dy), Cell::Data(dt), Cell::Data(v)) => {
                                 if *dt <= 0 {
-                                    return Err(*pos);
+                                    return self.error(*pos);
                                 }
                                 actions.push(Action::TimeTravel(
                                     self.current_time - (*dt as u32),
@@ -318,7 +325,7 @@ impl ThreeDSimulator {
                                     *v,
                                 ));
                             }
-                            _ => return Err(*pos),
+                            _ => return self.error(*pos),
                         }
                     }
                 }
@@ -330,7 +337,7 @@ impl ThreeDSimulator {
 
         if actions.is_empty() {
             // TODO: a better error
-            return Err(Vector2D::new(0, 0));
+            return self.error(Vector2D::new(0, 0));
         }
 
         let time_travels = actions
@@ -353,16 +360,16 @@ impl ThreeDSimulator {
                 }
                 Action::Write(pos, cell) => {
                     if moved_to_cells.contains(&pos) {
-                        return Err(pos);
+                        return self.error(pos);
                     }
                     if let Some(Cell::Submit) = new_cells.get(&pos) {
                         if submitted_value.is_some() {
-                            return Err(pos);
+                            return self.error(pos);
                         }
                         if let Cell::Data(cell) = cell {
                             submitted_value = Some(cell);
                         } else {
-                            return Err(pos);
+                            return self.error(pos);
                         }
                     }
                     new_cells.insert(pos, cell);
@@ -382,8 +389,7 @@ impl ThreeDSimulator {
         }
 
         if let Some(v) = submitted_value {
-            self.result = Some(v);
-            return Ok(SimulationStepResult::Finished(v));
+            return self.finished(v);
         }
 
         if !time_travels.is_empty() {
@@ -393,7 +399,7 @@ impl ThreeDSimulator {
             }
             if target_times.len() != 1 {
                 // TODO: a better error
-                return Err(Vector2D::new(0, 0));
+                return self.error(Vector2D::new(0, 0));
             }
             let target_time = target_times.into_iter().next().unwrap();
 
@@ -401,7 +407,7 @@ impl ThreeDSimulator {
             for (_, pos, value) in &time_travels {
                 if let Some(v) = target_writes.get(pos) {
                     if *v != value {
-                        return Err(*pos);
+                        return self.error(*pos);
                     }
                 }
                 target_writes.insert(*pos, value);
@@ -424,7 +430,17 @@ impl ThreeDSimulator {
             self.all_time_max_t = self.all_time_max_t.max(self.current_time);
         }
 
-        Ok(SimulationStepResult::Ok)
+        SimulationStepResult::Ok
+    }
+
+    fn error(&mut self, pos: Vector2D) -> SimulationStepResult {
+        self.result = SimulationStepResult::Error(pos);
+        self.result
+    }
+
+    fn finished(&mut self, value: i64) -> SimulationStepResult {
+        self.result = SimulationStepResult::Finished(value);
+        self.result
     }
 
     pub fn as_board(&self) -> ThreeDBoard {
@@ -453,7 +469,7 @@ impl ThreeDSimulator {
     pub fn step_back(&mut self) -> SimulationStepResult {
         // This is somewhat wrong, but it's clearer for the GUI
         if self.current_time > 0 {
-            self.result = None;
+            self.result = SimulationStepResult::Ok;
             self.steps_taken += 1;
             self.current_time -= 1;
             self.current_cells = self.history.pop().unwrap();

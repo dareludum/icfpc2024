@@ -40,8 +40,8 @@ impl ThreeDCommand {
             let result = sim.step();
             println!("Board[t={}]:\n{}", sim.time(), sim.as_board().save());
             match result {
-                Ok(SimulationStepResult::Ok) => {}
-                Ok(SimulationStepResult::Finished(v)) => {
+                SimulationStepResult::Ok => {}
+                SimulationStepResult::Finished(v) => {
                     println!(
                         "Program finished successfully: {} (score={})",
                         v,
@@ -49,8 +49,8 @@ impl ThreeDCommand {
                     );
                     break;
                 }
-                Ok(SimulationStepResult::AlreadyFinished) => unreachable!(),
-                Err(pos) => {
+                SimulationStepResult::AlreadyFinished => unreachable!(),
+                SimulationStepResult::Error(pos) => {
                     println!("Error at position: {:?}", pos);
                     break;
                 }

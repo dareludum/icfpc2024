@@ -65,7 +65,7 @@ pub fn gui_main(mut filepath: Option<PathBuf>, a: i64, b: i64) {
     center_viewport(&sim, &mut state);
 
     #[allow(unused_assignments)]
-    let mut current_sim_result = Ok(SimulationStepResult::Ok);
+    let mut current_sim_result = SimulationStepResult::Ok;
 
     let (mut rh, thread) = raylib::init().size(WINDOW_WIDTH, WINDOW_HEIGHT).build();
 
@@ -212,7 +212,7 @@ Misc:
         let mut delay_ms = 5;
         if rh.is_key_down(KeyboardKey::KEY_W) {
             let result = sim.step();
-            if result != Ok(SimulationStepResult::AlreadyFinished) {
+            if result != SimulationStepResult::AlreadyFinished {
                 current_sim_result = result;
                 update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
                 if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
@@ -232,11 +232,11 @@ Misc:
                         let result = sim.step_back();
                         if result != SimulationStepResult::AlreadyFinished {
                             state.history.push(sim.clone());
-                            current_sim_result = Ok(result);
+                            current_sim_result = result;
                         }
                     } else if let Some(prev_sim) = state.history.pop() {
                         sim = prev_sim;
-                        current_sim_result = Ok(SimulationStepResult::Ok);
+                        current_sim_result = SimulationStepResult::Ok;
                     }
                     update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
                 }
@@ -244,7 +244,7 @@ Misc:
                     state.history.push(sim.clone());
                     let result = sim.step();
                     match result {
-                        Ok(SimulationStepResult::AlreadyFinished) => {
+                        SimulationStepResult::AlreadyFinished => {
                             state.history.pop();
                         }
                         _ => {
@@ -271,7 +271,7 @@ Misc:
                             .expect("Failed to read the board file");
                         let board = ThreeDBoard::load(&board_file);
                         sim = ThreeDSimulator::new(board, a, b);
-                        current_sim_result = Ok(SimulationStepResult::Ok);
+                        current_sim_result = SimulationStepResult::Ok;
                         state.history.clear();
                         center_viewport(&sim, &mut state);
                         update_window_title(
@@ -289,14 +289,14 @@ Misc:
                             std::fs::read_to_string(path).expect("Failed to read the board file");
                         let board = ThreeDBoard::load(&board_file);
                         sim = ThreeDSimulator::new(board, a, b);
-                        current_sim_result = Ok(SimulationStepResult::Ok);
+                        current_sim_result = SimulationStepResult::Ok;
                         state.history.clear();
                         update_window_title(&rh, &thread, &sim, current_sim_result, Some(path));
                     }
                 }
                 KeyboardKey::KEY_N if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
                     sim = ThreeDSimulator::new(ThreeDBoard::default(), a, b);
-                    current_sim_result = Ok(SimulationStepResult::Ok);
+                    current_sim_result = SimulationStepResult::Ok;
                     state.history.clear();
                     filepath = None;
                     update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
@@ -523,7 +523,7 @@ fn update_window_title(
     rh: &RaylibHandle,
     thread: &RaylibThread,
     sim: &ThreeDSimulator,
-    current_sim_result: Result<SimulationStepResult, Vector2D>,
+    current_sim_result: SimulationStepResult,
     path: Option<&PathBuf>,
 ) {
     rh.set_window_title(
@@ -541,11 +541,10 @@ fn update_window_title(
             sim.steps_taken(),
             sim.score(),
             match current_sim_result {
-                Ok(SimulationStepResult::Finished(v)) => format!("{}", v),
-                Ok(SimulationStepResult::Ok) => "<running>".to_string(),
-                Ok(SimulationStepResult::AlreadyFinished) =>
-                    unreachable!("Must be handled elsewhere"),
-                Err(pos) => format!("<error at {:?}>", pos),
+                SimulationStepResult::Finished(v) => format!("{}", v),
+                SimulationStepResult::Ok => "<running>".to_string(),
+                SimulationStepResult::AlreadyFinished => unreachable!("Must be handled elsewhere"),
+                SimulationStepResult::Error(pos) => format!("<error at {:?}>", pos),
             }
         ),
     );
