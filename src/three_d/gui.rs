@@ -69,6 +69,8 @@ pub fn gui_main(mut filepath: Option<PathBuf>, a: i64, b: i64) {
 
     let (mut rh, thread) = raylib::init().size(WINDOW_WIDTH, WINDOW_HEIGHT).build();
 
+    rh.set_exit_key(None);
+
     update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
 
     while !rh.window_should_close() {
@@ -119,7 +121,6 @@ Simulation:
 Misc:
   C: center the viewport
   ?: show this help
-  ESC: close the program
 "#;
 
                 d.draw_text(HELP_TEXT, 10, 10, 18, colors::SOLARIZED_BASE0);
