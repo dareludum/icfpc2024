@@ -9,9 +9,9 @@ impl Vector2D {
     pub fn new(x: i32, y: i32) -> Self {
         Vector2D { x, y }
     }
-    
+
     pub fn manhattan(&self) -> i32 {
-        self.x.abs() + self.y.abs()       
+        self.x.abs() + self.y.abs()
     }
 }
 
@@ -67,7 +67,7 @@ pub enum Command {
     DownRight,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SpaceshipState {
     pub pos: Vector2D,
     pub speed: Vector2D,
@@ -120,5 +120,22 @@ impl SpaceshipState {
             speed: new_speed,
             path: self.path.clone() + &path,
         }
+    }
+
+    pub fn get_all_next_moves(&self) -> Vec<SpaceshipState> {
+        vec![
+            Command::UpLeft,
+            Command::Up,
+            Command::UpRight,
+            Command::Left,
+            Command::KeepSpeed,
+            Command::Right,
+            Command::DownLeft,
+            Command::Down,
+            Command::DownRight,
+        ]
+        .into_iter()
+        .map(|c| self.next(c))
+        .collect()
     }
 }

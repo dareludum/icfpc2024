@@ -13,12 +13,13 @@ pub use problem::Problem;
 pub use solution::Solution;
 pub use solver::{NoopSolver, Parameter, Solver};
 
-use crate::spaceship::SpaceshipGreedy;
+use crate::spaceship::{SpaceshipGreedy, SpaceshipOneByOne};
 
 static SOLVERS: Lazy<HashMap<&'static str, Box<dyn Solver>>> = Lazy::new(|| {
     let mut solvers: HashMap<&'static str, Box<dyn Solver>> = HashMap::new();
     solvers.insert("noop", Box::<NoopSolver>::default());
     solvers.insert("ss:greedy", Box::<SpaceshipGreedy>::default());
+    solvers.insert("ss:one_by_one", Box::<SpaceshipOneByOne>::default());
     // Add more solvers here
     solvers
 });
