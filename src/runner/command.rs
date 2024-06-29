@@ -9,6 +9,9 @@ pub struct SolveCommand {
     pub problem_name: String,
     #[argh(positional)]
     pub solver_spec: String,
+    #[argh(option, short = 'p')]
+    /// solve a single problem
+    pub single_problem: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,7 +48,7 @@ impl SolveCommand {
             .expect("Failed to create the best solution directory");
 
         // Load all problems from the problem directory
-        let problems = std::fs::read_dir(problem_dir)
+        let mut problems = std::fs::read_dir(problem_dir)
             .expect("Failed to read the problem directory")
             .map(|entry| entry.expect("Failed to read a problem directory entry"))
             .map(|entry| {
@@ -54,6 +57,10 @@ impl SolveCommand {
                 super::Problem::new(problem_path, problem_name)
             })
             .collect::<Vec<_>>();
+
+        if let Some(problem) = self.single_problem.as_ref() {
+            problems.retain(|p| p.name == *problem);
+        }
 
         // Solve all problems with the given solver
         for problem in problems {
@@ -71,7 +78,7 @@ impl SolveCommand {
             solution.save(&current_solution_path);
             let current_metadata = SolutionMetadata {
                 solver_spec: solver.name(),
-                score: solution.score(),
+                score: solution.score,
             };
             std::fs::write(
                 current_solution_path.with_extension("meta"),
@@ -93,7 +100,7 @@ impl SolveCommand {
                     best_metadata.score, best_metadata.solver_spec
                 );
 
-                if solution.score() < best_metadata.score {
+                if solution.score < best_metadata.score {
                     println!("New best solution: {}", current_metadata.score);
                     println!("!!! WE ARE WINNING SON !!!");
 
@@ -111,6 +118,14 @@ impl SolveCommand {
             }
 
             if new_best {
+                if let Some(resp) = crate::comms::send_encoded(solution.text.clone()) {
+                    crate::print_response(resp, false, true);
+                } else {
+                    eprintln!(
+                        "ERROR: Failed to send solution to server, not updating best solution"
+                    );
+                }
+
                 std::fs::copy(&current_solution_path, &best_solution_path)
                     .expect("Failed to copy the current solution to the best solution");
                 std::fs::copy(

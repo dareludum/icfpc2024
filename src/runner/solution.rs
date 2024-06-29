@@ -6,18 +6,16 @@ use crate::{ast::Node, serializer::serialize_str};
 pub struct Solution {
     pub icfp_code: Rc<Node>,
     pub text: String,
+    pub score: u64,
 }
 
 impl Solution {
-    pub fn new(icfp_code: Rc<Node>) -> Self {
+    pub fn new(icfp_code: Rc<Node>, score: u64) -> Self {
         Self {
             icfp_code: icfp_code.clone(),
             text: serialize_str(icfp_code),
+            score,
         }
-    }
-
-    pub fn score(&self) -> u64 {
-        self.text.len() as u64
     }
 
     pub fn save(&self, current_solution_path: &Path) {

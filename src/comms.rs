@@ -1,8 +1,11 @@
-use oxhttp::model::{HeaderName, Method, Request, Status};
+use oxhttp::model::{Body, HeaderName, Method, Request, Status};
 use oxhttp::Client;
 
-pub fn send(message: String) -> Option<String> {
-    let body = encode(message)?;
+pub fn send_string(message: String) -> Option<String> {
+    send_encoded(encode(message)?)
+}
+
+pub fn send_encoded(body: impl Into<Body>) -> Option<String> {
     let client = Client::new();
     let mut request = Request::builder(
         Method::POST,

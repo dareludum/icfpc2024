@@ -10,11 +10,14 @@ mod ast;
 mod base94;
 mod comms;
 mod eval;
+// TODO: Remove when fixed
+#[allow(dead_code)]
+mod lambdaman;
 mod lexer;
 mod parser;
-mod lambdaman;
 mod runner;
 mod serializer;
+mod spaceship;
 
 use argh::FromArgs;
 
@@ -138,31 +141,35 @@ fn main() -> std::io::Result<()> {
 }
 
 fn send_receive_single_command(command: String, print_raw_response: bool, add_newline: bool) {
-    match comms::send(command) {
+    match comms::send_string(command) {
         Some(response) => {
-            if print_raw_response {
-                println!("{}", response);
-                return;
-            }
-            let tokens = lexer::Token::lexer(&response)
-                .collect::<Result<Vec<_>, _>>()
-                .expect("Failed to lex response");
-            if tokens.len() == 1 {
-                if let lexer::Token::String(s) = &tokens[0] {
-                    if add_newline {
-                        println!("{}", s);
-                    } else {
-                        print!("{}", s);
-                    }
-                } else {
-                    eprintln!("Single raw token: {:?}", tokens[0]);
-                }
-            } else if add_newline {
-                println!("{}", response);
-            } else {
-                print!("{}", response);
-            }
+            print_response(response, print_raw_response, add_newline);
         }
         None => eprintln!("Failed to send message"),
+    }
+}
+
+pub fn print_response(response: String, print_raw_response: bool, add_newline: bool) {
+    if print_raw_response {
+        println!("{}", response);
+        return;
+    }
+    let tokens = lexer::Token::lexer(&response)
+        .collect::<Result<Vec<_>, _>>()
+        .expect("Failed to lex response");
+    if tokens.len() == 1 {
+        if let lexer::Token::String(s) = &tokens[0] {
+            if add_newline {
+                println!("{}", s);
+            } else {
+                print!("{}", s);
+            }
+        } else {
+            eprintln!("Single raw token: {:?}", tokens[0]);
+        }
+    } else if add_newline {
+        println!("{}", response);
+    } else {
+        print!("{}", response);
     }
 }

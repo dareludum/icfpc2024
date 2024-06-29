@@ -43,6 +43,6 @@ impl Solver for NoopSolver {
     }
 
     fn solve(&mut self) -> Solution {
-        Solution::new(Rc::new(Node::Value(Value::Str("".to_string()))))
+        Solution::new(Rc::new(Node::Value(Value::Str("".to_string()))), u64::MAX)
     }
 }
