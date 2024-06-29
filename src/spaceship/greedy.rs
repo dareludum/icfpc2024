@@ -1,11 +1,11 @@
 use std::{
-    collections::{HashSet, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     rc::Rc,
 };
 
 use crate::{
     ast::{Node, Value},
-    runner::{Problem, Solution, Solver},
+    runner::{Parameter, Problem, Solution, Solver},
     spaceship::model::{Command, SpaceshipState},
 };
 
@@ -15,6 +15,7 @@ use super::model::{SpaceshipModel, Vector2D};
 pub struct SpaceshipGreedy {
     pub problem: Problem,
     pub model: SpaceshipModel,
+    pub max_possible_states: u32,
 }
 
 impl Solver for SpaceshipGreedy {
@@ -25,6 +26,25 @@ impl Solver for SpaceshipGreedy {
     fn initialize(&mut self, problem: Problem, _solution: Option<Solution>) {
         self.model = SpaceshipModel::load(&problem.load());
         self.problem = problem;
+        self.max_possible_states = 30_000;
+    }
+
+    fn set_parameters(&mut self, parameters: HashMap<String, Parameter>) {
+        for (key, value) in parameters {
+            match key.as_str() {
+                "max_possible_states" => match value {
+                    Parameter::Int(value) => {
+                        self.max_possible_states = value as u32;
+                    }
+                    _ => {
+                        panic!("Invalid value for max_possible_states: {:?}", value);
+                    }
+                },
+                _ => {
+                    panic!("Unknown parameter: {}", key);
+                }
+            }
+        }
     }
 
     fn solve(&mut self) -> Solution {
@@ -32,6 +52,17 @@ impl Solver for SpaceshipGreedy {
             SpaceshipState::new(Vector2D::default(), Vector2D::default(), "".to_string());
 
         let mut points_to_visit = self.model.points.iter().cloned().collect::<HashSet<_>>();
+        let mut min_x = i32::MAX;
+        let mut max_x = i32::MIN;
+        let mut min_y = i32::MAX;
+        let mut max_y = i32::MIN;
+        for point in &points_to_visit {
+            min_x = min_x.min(point.x);
+            max_x = max_x.max(point.x);
+            min_y = min_y.min(point.y);
+            max_y = max_y.max(point.y);
+        }
+
         while !points_to_visit.is_empty() {
             // Look through all points we can visit from this one and pick a path that exists
             let mut possible_states = VecDeque::new();
@@ -56,9 +87,72 @@ impl Solver for SpaceshipGreedy {
                 println!("Visited states: {:?}", visited_states.len());
                 println!("Points to visit: {:?}", points_to_visit.len());
 
+                if possible_states.len() > self.max_possible_states as usize {
+                    eprintln!("Too many possible states, exiting");
+                    break;
+                }
+
+                // Presort states by distance to closest point
+                possible_states.make_contiguous().sort_by(|a, b| {
+                    let mut a_min_dist = i32::MAX;
+                    for point in &points_to_visit {
+                        a_min_dist = a_min_dist.min((*point - a.pos).manhattan());
+                    }
+                    let mut b_min_dist = i32::MAX;
+                    for point in &points_to_visit {
+                        b_min_dist = b_min_dist.min((*point - b.pos).manhattan());
+                    }
+                    a_min_dist.cmp(&b_min_dist)
+                });
+
                 let new_state = possible_states.pop_front().unwrap();
                 if visited_states.contains(&(new_state.pos, new_state.speed)) {
                     continue;
+                }
+
+                // Prune states that are going in the wrong direction
+                match new_state.path.chars().last().unwrap() {
+                    '7' => {
+                        if new_state.pos.x < min_x || new_state.pos.y > max_y {
+                            continue;
+                        }
+                    }
+                    '8' => {
+                        if new_state.pos.y > max_y {
+                            continue;
+                        }
+                    }
+                    '9' => {
+                        if new_state.pos.x > max_x || new_state.pos.y > max_y {
+                            continue;
+                        }
+                    }
+                    '4' => {
+                        if new_state.pos.x < min_x {
+                            continue;
+                        }
+                    }
+                    '6' => {
+                        if new_state.pos.x > max_x {
+                            continue;
+                        }
+                    }
+                    '1' => {
+                        if new_state.pos.x < min_x || new_state.pos.y < min_y {
+                            continue;
+                        }
+                    }
+                    '2' => {
+                        if new_state.pos.y < min_y {
+                            continue;
+                        }
+                    }
+                    '3' => {
+                        if new_state.pos.x > max_x || new_state.pos.y < min_y {
+                            continue;
+                        }
+                    }
+                    _ => {}
                 }
 
                 if points_to_visit.contains(&new_state.pos) {

@@ -9,6 +9,10 @@ impl Vector2D {
     pub fn new(x: i32, y: i32) -> Self {
         Vector2D { x, y }
     }
+    
+    pub fn manhattan(&self) -> i32 {
+        self.x.abs() + self.y.abs()       
+    }
 }
 
 impl Add for Vector2D {

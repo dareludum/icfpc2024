@@ -6,6 +6,7 @@ use crate::ast::{Node, Value};
 
 use super::{Problem, Solution};
 
+#[derive(Debug, Clone)]
 pub enum Parameter {
     Int(i64),
     String(String),

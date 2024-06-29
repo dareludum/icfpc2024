@@ -56,6 +56,7 @@ impl SolveCommand {
                 let problem_path = entry.path();
                 super::Problem::new(problem_path, problem_name)
             })
+            .filter(|p| p.path.extension().is_none())
             .collect::<Vec<_>>();
 
         if let Some(problem) = self.single_problem.as_ref() {
