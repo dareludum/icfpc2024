@@ -2,7 +2,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use dyn_clone::DynClone;
 
-use crate::ast::{Node, Value};
+use crate::icfp::{Node, Value};
 
 use super::{Problem, Solution};
 

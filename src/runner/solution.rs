@@ -1,6 +1,6 @@
 use std::{path::Path, rc::Rc};
 
-use crate::{ast::Node, serializer::serialize_str};
+use crate::icfp::{serialize_str, Node};
 
 #[derive(Debug, Clone)]
 pub struct Solution {

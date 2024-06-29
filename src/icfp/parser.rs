@@ -1,8 +1,7 @@
 use std::rc::Rc;
 
-use crate::{
-    ast::{BinaryOp, Node, NodeRef, UnuaryOp, Value, VarId},
-    lexer::Token,
+use super::{
+    Token, {BinaryOp, Node, NodeRef, UnuaryOp, Value, VarId},
 };
 use logos::Lexer;
 

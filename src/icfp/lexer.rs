@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use logos::{Lexer, Logos};
 
-use crate::base94::{base94_to_int, base94_to_str};
+use super::{base94, base94_to_int, base94_to_str};
 
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip r" ")]
@@ -89,19 +89,19 @@ impl std::fmt::Display for Token {
             Token::If => f.write_char('?'),
             Token::Lambda(val) => {
                 f.write_char('L')?;
-                f.write_str(&crate::base94::int_to_base94(*val))
+                f.write_str(&base94::int_to_base94(*val))
             }
             Token::Variable(val) => {
                 f.write_char('v')?;
-                f.write_str(&crate::base94::int_to_base94(*val))
+                f.write_str(&base94::int_to_base94(*val))
             }
             Token::Integer(val) => {
                 f.write_char('I')?;
-                f.write_str(&crate::base94::int_to_base94(*val))
+                f.write_str(&base94::int_to_base94(*val))
             }
             Token::String(val) => {
                 f.write_char('S')?;
-                f.write_str(&crate::base94::str_to_base94(val))
+                f.write_str(&base94::str_to_base94(val))
             }
         }
     }

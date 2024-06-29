@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    ast::{Node, Value},
+    icfp::{Node, Value},
     runner::{Problem, Solution, Solver},
     spaceship::model::SpaceshipState,
 };

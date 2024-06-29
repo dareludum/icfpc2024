@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    ast::{Node, Value},
+    icfp::{Node, Value},
     runner::{Parameter, Problem, Solution, Solver},
     spaceship::model::{Command, SpaceshipState},
 };

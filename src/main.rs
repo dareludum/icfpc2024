@@ -1,22 +1,17 @@
 use std::io::{stdin, Read, Write};
 
-use ast::Value;
-use lexer::Token;
+use icfp::parse;
+use icfp::Token;
+use icfp::Value;
 use logos::Logos;
-use parser::parse;
 use text_io::read;
 
-mod ast;
-mod base94;
 mod comms;
-mod eval;
+mod icfp;
 // TODO: Remove when fixed
 #[allow(dead_code)]
 mod lambdaman;
-mod lexer;
-mod parser;
 mod runner;
-mod serializer;
 mod spaceship;
 
 use argh::FromArgs;
@@ -110,7 +105,7 @@ fn main() -> std::io::Result<()> {
             if print {
                 ast.pretty_print(outstream)?;
             } else {
-                let res = eval::evaluate(ast);
+                let res = icfp::evaluate(ast);
                 if raw {
                     match res {
                         Value::Bool(b) => write!(outstream, "{}", b)?,
@@ -154,11 +149,11 @@ pub fn print_response(response: String, print_raw_response: bool, add_newline: b
         println!("{}", response);
         return;
     }
-    let tokens = lexer::Token::lexer(&response)
+    let tokens = icfp::Token::lexer(&response)
         .collect::<Result<Vec<_>, _>>()
         .expect("Failed to lex response");
     if tokens.len() == 1 {
-        if let lexer::Token::String(s) = &tokens[0] {
+        if let icfp::Token::String(s) = &tokens[0] {
             if add_newline {
                 println!("{}", s);
             } else {

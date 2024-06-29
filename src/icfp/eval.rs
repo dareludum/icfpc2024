@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use crate::ast::{BinaryOp, Node, NodeRef, UnuaryOp, Value, VarId};
+use super::{
+    base94_to_int, base94_to_str, int_to_base94, str_to_base94, BinaryOp, Node, NodeRef, UnuaryOp,
+    Value, VarId,
+};
 
 pub fn evaluate(tree: Rc<Node>) -> Value {
     Evaluator::new().evaluate(tree)
@@ -238,18 +241,12 @@ impl Evaluator {
                         UnuaryOp::IntNeg => (int(-v.as_int()), true),
                         UnuaryOp::BoolNot => (bool(!v.as_bool()), true),
                         UnuaryOp::StrToInt => (
-                            int(crate::base94::base94_to_int(&crate::base94::str_to_base94(
-                                v.as_str(),
-                            ))
-                            .unwrap() as i64),
+                            int(base94_to_int(&str_to_base94(v.as_str())).unwrap() as i64),
                             true,
                         ),
-                        UnuaryOp::IntToStr => (
-                            str(crate::base94::base94_to_str(&crate::base94::int_to_base94(
-                                v.as_int() as u64,
-                            ))),
-                            true,
-                        ),
+                        UnuaryOp::IntToStr => {
+                            (str(base94_to_str(&int_to_base94(v.as_int() as u64))), true)
+                        }
                     }
                 } else if reduced {
                     (Rc::new(Node::UnuaryOp { op: *op, body }), true)
@@ -349,10 +346,8 @@ fn str(v: String) -> NodeRef {
 mod tests {
     use logos::Logos;
 
-    use crate::{
-        ast::{BinaryOp, VarId},
-        lexer::Token,
-        parser::parse,
+    use super::super::{
+        parse, Token, {BinaryOp, VarId},
     };
 
     use super::*;
