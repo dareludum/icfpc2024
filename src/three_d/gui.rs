@@ -371,7 +371,10 @@ ESC: close the program
                     sim.set_cell(state.selected_pos, Cell::Multiply);
                 }
                 // /
-                KeyboardKey::KEY_SLASH => {
+                KeyboardKey::KEY_SLASH
+                    if !(rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                        || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT)) =>
+                {
                     sim.set_cell(state.selected_pos, Cell::Divide);
                 }
                 // %
