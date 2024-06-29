@@ -9,7 +9,7 @@ use crate::{
     spaceship::model::{Command, SpaceshipState},
 };
 
-use super::model::{SpaceshipModel, Vector2D};
+use super::model::SpaceshipModel;
 
 #[derive(Debug, Clone, Default)]
 pub struct SpaceshipGreedy {
@@ -48,8 +48,7 @@ impl Solver for SpaceshipGreedy {
     }
 
     fn solve(&mut self) -> Solution {
-        let mut current_state =
-            SpaceshipState::new(Vector2D::default(), Vector2D::default(), "".to_string());
+        let mut current_state = SpaceshipState::default();
 
         let mut points_to_visit = self.model.points.iter().cloned().collect::<HashSet<_>>();
         let mut min_x = i32::MAX;

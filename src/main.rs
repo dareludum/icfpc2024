@@ -9,8 +9,10 @@ use text_io::read;
 mod comms;
 mod icfp;
 // TODO: Remove when fixed
+mod geometry;
 #[allow(dead_code)]
 mod lambdaman;
+mod lambdaman_alt;
 mod runner;
 mod spaceship;
 

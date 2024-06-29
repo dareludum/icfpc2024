@@ -1,8 +1,6 @@
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use dyn_clone::DynClone;
-
-use crate::icfp::{Node, Value};
 
 use super::{Problem, Solution};
 
@@ -28,22 +26,3 @@ pub trait Solver: DynClone + Sync + Send {
 }
 
 dyn_clone::clone_trait_object!(Solver);
-
-#[derive(Clone, Default)]
-pub struct NoopSolver {
-    problem: Problem,
-}
-
-impl Solver for NoopSolver {
-    fn name(&self) -> String {
-        "noop".to_owned()
-    }
-
-    fn initialize(&mut self, problem: Problem, _solution: Option<Solution>) {
-        self.problem = problem;
-    }
-
-    fn solve(&mut self) -> Solution {
-        Solution::new(Rc::new(Node::Value(Value::Str("".to_string()))), u64::MAX)
-    }
-}
