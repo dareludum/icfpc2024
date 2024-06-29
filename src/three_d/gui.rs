@@ -129,10 +129,15 @@ Misc:
 
         if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
             // TODO: cell size
-            state.selected_pos = Vector2D::new(
-                (mouse_pos.x as i32 - state.viewport_offset.x) / 30,
-                (mouse_pos.y as i32 - state.viewport_offset.y) / 30,
-            );
+            let mut x = mouse_pos.x as i32 - state.viewport_offset.x;
+            let mut y = mouse_pos.y as i32 - state.viewport_offset.y;
+            if x < 0 {
+                x -= 30;
+            }
+            if y < 0 {
+                y -= 30;
+            }
+            state.selected_pos = Vector2D::new(x / 30, y / 30);
         } else if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
             state.viewport_drag_point = Some(mouse_pos);
         } else {
