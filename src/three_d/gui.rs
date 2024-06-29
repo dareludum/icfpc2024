@@ -12,7 +12,9 @@ struct GuiState {
     height: i32,
     viewport_offset: Vector2D,
     viewport_drag_point: Option<Vector2>,
-    selected_pos: Option<Vector2D>,
+    selected_pos: Vector2D,
+    edit_mode: bool,
+    edited_value: String,
 }
 
 #[allow(dead_code)]
@@ -64,10 +66,10 @@ pub fn gui_main(board: ThreeDBoard, a: i64, b: i64) {
 
         if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
             // TODO: cell size
-            state.selected_pos = Some(Vector2D::new(
+            state.selected_pos = Vector2D::new(
                 (mouse_pos.x as i32 - state.viewport_offset.x) / 30,
                 (mouse_pos.y as i32 - state.viewport_offset.y) / 30,
-            ));
+            );
         } else if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
             state.viewport_drag_point = Some(mouse_pos);
         } else {
@@ -141,16 +143,16 @@ pub fn gui_main(board: ThreeDBoard, a: i64, b: i64) {
         if let Some(key) = rh.get_key_pressed() {
             match key {
                 KeyboardKey::KEY_LEFT => {
-                    state.selected_pos = state.selected_pos.map(|pos| pos.left());
+                    state.selected_pos = state.selected_pos.left();
                 }
                 KeyboardKey::KEY_RIGHT => {
-                    state.selected_pos = state.selected_pos.map(|pos| pos.right());
+                    state.selected_pos = state.selected_pos.right();
                 }
                 KeyboardKey::KEY_UP => {
-                    state.selected_pos = state.selected_pos.map(|pos| pos.up());
+                    state.selected_pos = state.selected_pos.up();
                 }
                 KeyboardKey::KEY_DOWN => {
-                    state.selected_pos = state.selected_pos.map(|pos| pos.down());
+                    state.selected_pos = state.selected_pos.down();
                 }
                 KeyboardKey::KEY_A => {
                     sim.step_back();
@@ -185,109 +187,127 @@ pub fn gui_main(board: ThreeDBoard, a: i64, b: i64) {
                         ),
                     );
                 }
+                KeyboardKey::KEY_ENTER => {
+                    state.edit_mode = !state.edit_mode;
+                    if !state.edit_mode {
+                        if let Ok(v) = state.edited_value.parse::<i64>() {
+                            sim.set_cell(state.selected_pos, Cell::Data(v));
+                        }
+                        state.edited_value.clear();
+                    }
+                }
+                KeyboardKey::KEY_DELETE => {
+                    sim.remove_cell(state.selected_pos);
+                }
                 // <
                 KeyboardKey::KEY_COMMA
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                         || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
                 {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::MoveLeft);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::MoveLeft);
                 }
                 // >
                 KeyboardKey::KEY_PERIOD
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                         || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
                 {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::MoveRight);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::MoveRight);
                 }
                 // ^
                 KeyboardKey::KEY_SIX
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                         || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
                 {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::MoveUp);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::MoveUp);
                 }
                 // v
                 KeyboardKey::KEY_V => {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::MoveDown);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::MoveDown);
                 }
                 // +
                 KeyboardKey::KEY_EQUAL
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                         || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
                 {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::Add);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::Add);
                 }
                 // -
-                KeyboardKey::KEY_MINUS => {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::Subtract);
-                    }
+                KeyboardKey::KEY_MINUS if !state.edit_mode => {
+                    sim.set_cell(state.selected_pos, Cell::Subtract);
                 }
                 // *
-                KeyboardKey::KEY_EIGHT => {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::Multiply);
-                    }
+                KeyboardKey::KEY_EIGHT if !state.edit_mode => {
+                    sim.set_cell(state.selected_pos, Cell::Multiply);
                 }
                 // /
                 KeyboardKey::KEY_SLASH => {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::Divide);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::Divide);
                 }
                 // %
                 KeyboardKey::KEY_FIVE
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                         || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
                 {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::Modulo);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::Modulo);
                 }
                 // =
                 KeyboardKey::KEY_EQUAL => {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::Equal);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::Equal);
                 }
                 // #
                 KeyboardKey::KEY_THREE
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                         || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
                 {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::NotEqual);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::NotEqual);
                 }
                 // @
                 KeyboardKey::KEY_TWO
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                         || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
                 {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::TimeWarp);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::TimeWarp);
                 }
                 // S
                 KeyboardKey::KEY_S => {
-                    if let Some(pos) = state.selected_pos {
-                        sim.set_cell(pos, Cell::Submit);
-                    }
+                    sim.set_cell(state.selected_pos, Cell::Submit);
                 }
-                KeyboardKey::KEY_DELETE => {
-                    if let Some(pos) = state.selected_pos {
-                        sim.remove_cell(pos);
-                    }
+                // Numbers
+                KeyboardKey::KEY_ZERO if state.edit_mode => {
+                    state.edited_value += "0";
+                }
+                KeyboardKey::KEY_ONE if state.edit_mode => {
+                    state.edited_value += "1";
+                }
+                KeyboardKey::KEY_TWO if state.edit_mode => {
+                    state.edited_value += "2";
+                }
+                KeyboardKey::KEY_THREE if state.edit_mode => {
+                    state.edited_value += "3";
+                }
+                KeyboardKey::KEY_FOUR if state.edit_mode => {
+                    state.edited_value += "4";
+                }
+                KeyboardKey::KEY_FIVE if state.edit_mode => {
+                    state.edited_value += "5";
+                }
+                KeyboardKey::KEY_SIX if state.edit_mode => {
+                    state.edited_value += "6";
+                }
+                KeyboardKey::KEY_SEVEN if state.edit_mode => {
+                    state.edited_value += "7";
+                }
+                KeyboardKey::KEY_EIGHT if state.edit_mode => {
+                    state.edited_value += "8";
+                }
+                KeyboardKey::KEY_NINE if state.edit_mode => {
+                    state.edited_value += "9";
+                }
+                KeyboardKey::KEY_MINUS if state.edit_mode => {
+                    state.edited_value += "-";
+                }
+                KeyboardKey::KEY_BACKSPACE if state.edit_mode => {
+                    state.edited_value.pop();
                 }
                 _ => {}
             }
@@ -440,14 +460,27 @@ fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator)
         }
     }
 
-    if let Some(pos) = state.selected_pos {
+    {
         d.draw_rectangle_lines(
-            state.viewport_offset.x + pos.x * CELL_SIZE,
-            state.viewport_offset.y + pos.y * CELL_SIZE + 1,
+            state.viewport_offset.x + state.selected_pos.x * CELL_SIZE,
+            state.viewport_offset.y + state.selected_pos.y * CELL_SIZE + 1,
             CELL_SIZE - 1,
             CELL_SIZE - 1,
-            colors::SOLARIZED_BASE01,
+            if state.edit_mode {
+                colors::SOLARIZED_RED
+            } else {
+                colors::SOLARIZED_BASE01
+            },
         );
+        if state.edit_mode {
+            d.draw_text(
+                &state.edited_value,
+                state.viewport_offset.x + state.selected_pos.x * CELL_SIZE + 5,
+                state.viewport_offset.y + state.selected_pos.y * CELL_SIZE + 5,
+                25,
+                colors::SOLARIZED_RED,
+            );
+        }
     }
 
     let start_x = state.viewport_offset.x % CELL_SIZE;
