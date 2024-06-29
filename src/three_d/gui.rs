@@ -1,4 +1,4 @@
-use std::{thread, time};
+use std::{path::PathBuf, thread, time};
 
 use crate::{geometry::Vector2D, three_d::sim::ThreeDSimulator};
 
@@ -40,9 +40,12 @@ mod colors {
     pub static SOLARIZED_GREEN: Color = Color::new(0x85, 0x99, 0x00, 0xff);
 }
 
-pub fn gui_main(board: ThreeDBoard, a: i64, b: i64) {
+pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
     const WINDOW_WIDTH: i32 = 1024;
     const WINDOW_HEIGHT: i32 = 768;
+
+    let board_file = std::fs::read_to_string(&filepath).expect("Failed to read the board file");
+    let board = ThreeDBoard::load(&board_file);
 
     let mut state = GuiState {
         width: WINDOW_WIDTH,
@@ -142,6 +145,48 @@ pub fn gui_main(board: ThreeDBoard, a: i64, b: i64) {
         let need_to_sleep = true;
         if let Some(key) = rh.get_key_pressed() {
             match key {
+                KeyboardKey::KEY_A => {
+                    sim.step_back();
+                    current_sim_result = Ok(None);
+                    update_window_title(&rh, &thread, &sim, current_sim_result);
+                }
+                KeyboardKey::KEY_D => {
+                    current_sim_result = sim.step();
+                    update_window_title(&rh, &thread, &sim, current_sim_result);
+                }
+                KeyboardKey::KEY_O if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
+                    let cwd = std::env::current_dir().expect("Failed to get current directory");
+                    if let Some(path) = rfd::FileDialog::new()
+                        .set_directory(cwd)
+                        .set_title("Open board")
+                        .pick_file()
+                    {
+                        filepath = path;
+                        let board_file = std::fs::read_to_string(&filepath)
+                            .expect("Failed to read the board file");
+                        let board = ThreeDBoard::load(&board_file);
+                        sim = ThreeDSimulator::new(board, a, b);
+                        current_sim_result = Ok(None);
+                        update_window_title(&rh, &thread, &sim, current_sim_result);
+                    }
+                }
+                KeyboardKey::KEY_S if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) {
+                        let cwd = std::env::current_dir().expect("Failed to get current directory");
+                        if let Some(path) = rfd::FileDialog::new()
+                            .set_directory(cwd)
+                            .set_title("Save board")
+                            .save_file()
+                        {
+                            filepath = path;
+                            let board = sim.as_board().save();
+                            std::fs::write(&filepath, board).expect("Failed to write to file");
+                        }
+                    } else {
+                        let board = sim.as_board().save();
+                        std::fs::write(&filepath, board).expect("Failed to write to file");
+                    }
+                }
                 KeyboardKey::KEY_LEFT => {
                     state.selected_pos = state.selected_pos.left();
                 }
@@ -153,39 +198,6 @@ pub fn gui_main(board: ThreeDBoard, a: i64, b: i64) {
                 }
                 KeyboardKey::KEY_DOWN => {
                     state.selected_pos = state.selected_pos.down();
-                }
-                KeyboardKey::KEY_A => {
-                    sim.step_back();
-                    current_sim_result = Ok(None);
-                    rh.set_window_title(
-                        &thread,
-                        &format!(
-                            "t={} score={} result={}",
-                            sim.time(),
-                            sim.score(),
-                            match current_sim_result {
-                                Ok(Some(v)) => format!("{}", v),
-                                Ok(None) => "<running>".to_string(),
-                                Err(pos) => format!("<error at {:?}>", pos),
-                            }
-                        ),
-                    );
-                }
-                KeyboardKey::KEY_D => {
-                    current_sim_result = sim.step();
-                    rh.set_window_title(
-                        &thread,
-                        &format!(
-                            "t={} score={} result={}",
-                            sim.time(),
-                            sim.score(),
-                            match current_sim_result {
-                                Ok(Some(v)) => format!("{}", v),
-                                Ok(None) => "<running>".to_string(),
-                                Err(pos) => format!("<error at {:?}>", pos),
-                            }
-                        ),
-                    );
                 }
                 KeyboardKey::KEY_ENTER => {
                     state.edit_mode = !state.edit_mode;
@@ -317,6 +329,27 @@ pub fn gui_main(board: ThreeDBoard, a: i64, b: i64) {
             thread::sleep(time::Duration::from_millis(5));
         }
     }
+}
+
+fn update_window_title(
+    rh: &RaylibHandle,
+    thread: &RaylibThread,
+    sim: &ThreeDSimulator,
+    current_sim_result: Result<Option<i64>, Vector2D>,
+) {
+    rh.set_window_title(
+        thread,
+        &format!(
+            "t={} score={} result={}",
+            sim.time(),
+            sim.score(),
+            match current_sim_result {
+                Ok(Some(v)) => format!("{}", v),
+                Ok(None) => "<running>".to_string(),
+                Err(pos) => format!("<error at {:?}>", pos),
+            }
+        ),
+    );
 }
 
 fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator) {

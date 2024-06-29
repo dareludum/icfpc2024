@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use argh::FromArgs;
 
 use crate::three_d::gui::gui_main;
@@ -24,14 +26,14 @@ pub struct ThreeDCommand {
 
 impl ThreeDCommand {
     pub fn run(&self) {
+        if self.interactive {
+            return gui_main(PathBuf::from(&self.program_path), self.a, self.b);
+        }
+
         let board_file =
             std::fs::read_to_string(&self.program_path).expect("Failed to read the board file");
         let board = ThreeDBoard::load(&board_file);
         println!("Initial board:\n{}", board.save());
-
-        if self.interactive {
-            return gui_main(board, self.a, self.b);
-        }
 
         let mut sim = ThreeDSimulator::new(board, self.a, self.b);
         loop {
