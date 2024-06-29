@@ -157,12 +157,10 @@ fn send_receive_single_command(command: String, print_raw_response: bool, add_ne
                 } else {
                     eprintln!("Single raw token: {:?}", tokens[0]);
                 }
+            } else if add_newline {
+                println!("{}", response);
             } else {
-                if add_newline {
-                    println!("{}", response);
-                } else {
-                    print!("{}", response);
-                }
+                print!("{}", response);
             }
         }
         None => eprintln!("Failed to send message"),

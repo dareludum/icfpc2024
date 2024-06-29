@@ -101,7 +101,7 @@ impl std::fmt::Display for Token {
             }
             Token::String(val) => {
                 f.write_char('S')?;
-                f.write_str(&&crate::base94::str_to_base94(&val))
+                f.write_str((&crate::base94::str_to_base94(val)))
             }
         }
     }
