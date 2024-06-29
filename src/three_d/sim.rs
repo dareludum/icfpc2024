@@ -16,6 +16,7 @@ pub struct ThreeDSimulator {
     all_time_max_t: u32,
     a: i64,
     b: i64,
+    steps_taken: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -72,6 +73,7 @@ impl ThreeDSimulator {
             all_time_max_t: 0,
             a,
             b,
+            steps_taken: 0,
         }
     }
 
@@ -101,11 +103,21 @@ impl ThreeDSimulator {
         self.b = b;
     }
 
+    pub fn steps_taken(&self) -> u32 {
+        self.steps_taken
+    }
+
     pub fn cells(&self) -> &HashMap<Vector2D, Cell> {
         &self.current_cells
     }
 
     pub fn step(&mut self) -> Result<Option<i64>, Vector2D> {
+        self.steps_taken += 1;
+        if self.steps_taken > 1_000_000 {
+            // TODO: a better error
+            return Err(Vector2D::new(0, 0));
+        }
+
         if self.history.is_empty() {
             self.history.push(self.current_cells.clone());
 
@@ -425,6 +437,8 @@ impl ThreeDSimulator {
     }
 
     pub fn step_back(&mut self) {
+        // This is somewhat wrong, but it's clearer for the GUI
+        self.steps_taken += 1;
         if self.current_time > 0 {
             self.current_time -= 1;
             self.current_cells = self.history.pop().unwrap();

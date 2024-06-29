@@ -18,6 +18,7 @@ struct GuiState {
     selected_pos: Vector2D,
     edit_mode: bool,
     edited_value: String,
+    history: Vec<ThreeDSimulator>,
 }
 
 #[allow(dead_code)]
@@ -72,29 +73,39 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
                 && (d.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                     || d.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT))
             {
-                const HELP_TEXT: &str = r#"Controls:
+                const HELP_TEXT: &str = r#"===== HELP =====
+
 Arrow keys: move the selection
+
 Enter: toggle edit mode
  - In edit mode, type a number and press Enter to set the selected cell to that number
  - If over A or B inputs, will set the input value instead
  - Only numbers, minus sign and backspace are allowed
-Delete: remove the selected cell
-< > ^ v: set the selected cell to move left/right/up/down
-+ - * / %: set the selected cell to add/subtract/multiply/divide/modulo
-= #: set the selected cell to equal/not equal
-@: set the selected cell to time warp
-S: set the selected cell to submit
-A B: set the selected cell to input A or B
+
+ Cell keys:
+  < > ^ v: set the selected cell to move left/right/up/down
+  - + - * / %: set the selected cell to add/subtract/multiply/divide/modulo
+  = #: set the selected cell to equal/not equal
+  @: set the selected cell to time warp
+  S: set the selected cell to submit
+  A B: set the selected cell to input A or B
+  Delete: remove the selected cell
+
 Mouse actions:
- - Left button: select a cell
- - Right button: drag the viewport
+  Left button: select a cell
+  Right button: drag the viewport
+
 File management:
- - Ctrl+O: open a board
- - Ctrl+S: save the board
- - Ctrl+Shift+S: save the board as
+  Ctrl+O: open a board
+  Ctrl+S: save the board
+  dCtrl+Shift+S: save the board as
+
 Simulation:
- - Q: step back
- - E: step forward
+  Q: step back in simulation history (time travel)
+  Ctrl+Q: undo (revert to the previous state, undoes time travel too)
+  E: execute one step of the simulation
+
+ESC: close the program
 "#;
 
                 d.draw_text(HELP_TEXT, 10, 10, 18, colors::SOLARIZED_BASE0);
@@ -184,11 +195,21 @@ Simulation:
         if let Some(key) = rh.get_key_pressed() {
             match key {
                 KeyboardKey::KEY_Q => {
-                    sim.step_back();
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                        || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT)
+                    {
+                        if let Some(prev_sim) = state.history.pop() {
+                            sim = prev_sim;
+                        }
+                    } else {
+                        state.history.push(sim.clone());
+                        sim.step_back();
+                    }
                     current_sim_result = Ok(None);
                     update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                 }
                 KeyboardKey::KEY_E => {
+                    state.history.push(sim.clone());
                     current_sim_result = sim.step();
                     update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                 }
@@ -409,11 +430,12 @@ fn update_window_title(
     rh.set_window_title(
         thread,
         &format!(
-            "[{}] a={} b={} t={} score={} result={}",
+            "[{}] a={} b={} t={} step={} score={} result={}",
             path.file_name().unwrap().to_string_lossy(),
             sim.a(),
             sim.b(),
             sim.time(),
+            sim.steps_taken(),
             sim.score(),
             match current_sim_result {
                 Ok(Some(v)) => format!("{}", v),
