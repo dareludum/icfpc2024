@@ -340,45 +340,41 @@ impl ThreeDSimulator {
             return self.error(Vector2D::new(0, 0));
         }
 
-        let time_travels = actions
-            .iter()
-            .filter_map(|action| match action {
-                Action::TimeTravel(time, pos, v) => Some((*time, *pos, *v)),
-                _ => None,
-            })
-            .collect::<Vec<_>>();
+        let mut erases = vec![];
+        let mut writes = vec![];
+        let mut time_travels = vec![];
+        for action in actions {
+            match action {
+                Action::Erase(pos) => erases.push(pos),
+                Action::Write(pos, cell) => writes.push((pos, cell)),
+                Action::TimeTravel(time, pos, value) => time_travels.push((time, pos, value)),
+            }
+        }
 
         // First, process the new state without time travels, because submits take priority
         let mut new_cells = self.current_cells.clone();
 
         let mut moved_to_cells = HashSet::new();
         let mut submitted_value = None;
-        for action in actions {
-            match action {
-                Action::Erase(pos) => {
-                    new_cells.remove(&pos);
+        for pos in erases {
+            new_cells.remove(&pos);
+        }
+        for (pos, cell) in writes {
+            if moved_to_cells.contains(&pos) {
+                return self.error(pos);
+            }
+            if let Some(Cell::Submit) = new_cells.get(&pos) {
+                if submitted_value.is_some() {
+                    return self.error(pos);
                 }
-                Action::Write(pos, cell) => {
-                    if moved_to_cells.contains(&pos) {
-                        return self.error(pos);
-                    }
-                    if let Some(Cell::Submit) = new_cells.get(&pos) {
-                        if submitted_value.is_some() {
-                            return self.error(pos);
-                        }
-                        if let Cell::Data(cell) = cell {
-                            submitted_value = Some(cell);
-                        } else {
-                            return self.error(pos);
-                        }
-                    }
-                    new_cells.insert(pos, cell);
-                    moved_to_cells.insert(pos);
-                }
-                Action::TimeTravel(_, _, _) => {
-                    // Processed below
+                if let Cell::Data(cell) = cell {
+                    submitted_value = Some(cell);
+                } else {
+                    return self.error(pos);
                 }
             }
+            new_cells.insert(pos, cell);
+            moved_to_cells.insert(pos);
         }
 
         for pos in new_cells.keys() {
