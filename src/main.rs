@@ -7,14 +7,16 @@ use logos::Logos;
 use text_io::read;
 
 mod comms;
+mod geometry;
 mod icfp;
 // TODO: Remove when fixed
-mod geometry;
 #[allow(dead_code)]
+#[allow(clippy::all)]
 mod lambdaman;
 mod lambdaman_alt;
 mod runner;
 mod spaceship;
+mod three_d;
 
 use argh::FromArgs;
 
@@ -31,6 +33,7 @@ enum CliSubcommands {
     Eval(EvalCommand),
     Comm(CommCommand),
     Solve(runner::SolveCommand),
+    ThreeD(three_d::ThreeDCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -133,6 +136,7 @@ fn main() -> std::io::Result<()> {
             }
         }
         CliSubcommands::Solve(cmd) => cmd.run(),
+        CliSubcommands::ThreeD(cmd) => cmd.run(),
     };
     Ok(())
 }

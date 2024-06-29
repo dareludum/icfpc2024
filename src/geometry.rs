@@ -13,6 +13,22 @@ impl Vector2D {
     pub fn manhattan(&self) -> i32 {
         self.x.abs() + self.y.abs()
     }
+
+    pub fn left(&self) -> Self {
+        Vector2D::new(self.x - 1, self.y)
+    }
+
+    pub fn right(&self) -> Self {
+        Vector2D::new(self.x + 1, self.y)
+    }
+
+    pub fn up(&self) -> Self {
+        Vector2D::new(self.x, self.y - 1)
+    }
+
+    pub fn down(&self) -> Self {
+        Vector2D::new(self.x, self.y + 1)
+    }
 }
 
 impl Add for Vector2D {
