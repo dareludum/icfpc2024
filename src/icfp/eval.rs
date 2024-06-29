@@ -26,6 +26,9 @@ impl Evaluator {
             let current_substitutions = self.num_substitutions;
             tree = self.beta_reduction(tree.clone());
 
+            eprintln!("Step {}", self.num_substitutions);
+            tree.pretty_print(&mut std::io::stderr()).unwrap();
+
             loop {
                 let (new_tree, reduced) = Self::strict_reduction(tree.clone());
                 if reduced {
@@ -217,6 +220,104 @@ impl Evaluator {
                                     _ => todo!(),
                                 }
                             }
+                        }
+                    } else if let (Node::Value(Value::Int(0)), _) = (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::IntMul {
+                            return (int(0), true);
+                        }
+                    } else if let (_, Node::Value(Value::Int(0))) = (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::IntMul {
+                            return (int(0), true);
+                        }
+                    } else if let (Node::Value(Value::Int(1)), _) = (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::IntMul {
+                            return (right.clone(), true);
+                        }
+                    } else if let (_, Node::Value(Value::Int(1))) = (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::IntMul {
+                            return (left.clone(), true);
+                        }
+                    } else if let (Node::Value(Value::Int(0)), _) = (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::IntAdd {
+                            return (right.clone(), true);
+                        }
+                    } else if let (_, Node::Value(Value::Int(0))) = (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::IntAdd {
+                            return (left.clone(), true);
+                        }
+                    } else if let (_, Node::Value(Value::Int(0))) = (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::IntSub {
+                            return (left.clone(), true);
+                        }
+                    } else if let (_, Node::Value(Value::Int(1))) = (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::IntDiv {
+                            return (left.clone(), true);
+                        }
+                    } else if let (Node::Value(Value::Bool(false)), _) =
+                        (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::BoolAnd {
+                            return (bool(false), true);
+                        }
+                    } else if let (_, Node::Value(Value::Bool(false))) =
+                        (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::BoolAnd {
+                            return (bool(false), true);
+                        }
+                    } else if let (Node::Value(Value::Bool(true)), _) =
+                        (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::BoolAnd {
+                            return (right.clone(), true);
+                        }
+                    } else if let (_, Node::Value(Value::Bool(true))) =
+                        (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::BoolAnd {
+                            return (left.clone(), true);
+                        }
+                    } else if let (Node::Value(Value::Bool(true)), _) =
+                        (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::BoolOr {
+                            return (bool(true), true);
+                        }
+                    } else if let (_, Node::Value(Value::Bool(true))) =
+                        (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::BoolOr {
+                            return (bool(true), true);
+                        }
+                    } else if let (Node::Value(Value::Bool(false)), _) =
+                        (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::BoolOr {
+                            return (right.clone(), true);
+                        }
+                    } else if let (_, Node::Value(Value::Bool(false))) =
+                        (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::BoolOr {
+                            return (left.clone(), true);
+                        }
+                    } else if let (Node::Value(Value::Str(s)), _) = (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::StrConcat && s.is_empty() {
+                            return (right.clone(), true);
+                        }
+                    } else if let (_, Node::Value(Value::Str(s))) = (left.as_ref(), right.as_ref())
+                    {
+                        if *op == BinaryOp::StrConcat && s.is_empty() {
+                            return (left.clone(), true);
                         }
                     }
 
