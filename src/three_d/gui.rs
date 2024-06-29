@@ -100,8 +100,9 @@ Mouse actions:
 
 File management:
   Ctrl+O: open a board
+  Ctrl+R: reload the current board
   Ctrl+S: save the board
-  dCtrl+Shift+S: save the board as
+  Ctrl+Shift+S: save the board as
 
 Simulation:
   Q: undo (revert to the previous state, undoes time travel too)
@@ -236,8 +237,18 @@ ESC: close the program
                         let board = ThreeDBoard::load(&board_file);
                         sim = ThreeDSimulator::new(board, a, b);
                         current_sim_result = Ok(SimulationStepResult::Ok);
+                        state.history.clear();
                         update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                     }
+                }
+                KeyboardKey::KEY_R if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
+                    let board_file =
+                        std::fs::read_to_string(&filepath).expect("Failed to read the board file");
+                    let board = ThreeDBoard::load(&board_file);
+                    sim = ThreeDSimulator::new(board, a, b);
+                    current_sim_result = Ok(SimulationStepResult::Ok);
+                    state.history.clear();
+                    update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                 }
                 KeyboardKey::KEY_S if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) {
