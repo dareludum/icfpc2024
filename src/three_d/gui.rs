@@ -112,6 +112,7 @@ Simulation:
   Q: undo (revert to the previous state, undoes time travel too)
   Shift+Q: step back in simulation history (time travel)
   E: execute one step of the simulation
+  Shift+E: make the current simulation state the new initial state
   W: run the simulation (small delay between steps for visual feedback)
   Shift+W: run the simulation without delay
 
@@ -241,21 +242,35 @@ Misc:
                     update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
                 }
                 KeyboardKey::KEY_E => {
-                    state.history.push(sim.clone());
-                    let result = sim.step();
-                    match result {
-                        SimulationStepResult::AlreadyFinished => {
-                            state.history.pop();
-                        }
-                        _ => {
-                            current_sim_result = result;
-                            update_window_title(
-                                &rh,
-                                &thread,
-                                &sim,
-                                current_sim_result,
-                                filepath.as_ref(),
-                            );
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                        || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT)
+                    {
+                        sim = ThreeDSimulator::new(sim.as_board().clone(), a, b);
+                        current_sim_result = SimulationStepResult::Ok;
+                        update_window_title(
+                            &rh,
+                            &thread,
+                            &sim,
+                            current_sim_result,
+                            filepath.as_ref(),
+                        );
+                    } else {
+                        state.history.push(sim.clone());
+                        let result = sim.step();
+                        match result {
+                            SimulationStepResult::AlreadyFinished => {
+                                state.history.pop();
+                            }
+                            _ => {
+                                current_sim_result = result;
+                                update_window_title(
+                                    &rh,
+                                    &thread,
+                                    &sim,
+                                    current_sim_result,
+                                    filepath.as_ref(),
+                                );
+                            }
                         }
                     }
                 }
