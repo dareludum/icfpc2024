@@ -214,11 +214,13 @@ ESC: close the program
                     update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                 }
                 KeyboardKey::KEY_E => {
+                    state.history.push(sim.clone());
                     let result = sim.step();
                     match result {
-                        Ok(SimulationStepResult::AlreadyFinished) => {}
+                        Ok(SimulationStepResult::AlreadyFinished) => {
+                            state.history.pop();
+                        }
                         _ => {
-                            state.history.push(sim.clone());
                             current_sim_result = result;
                             update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                         }
