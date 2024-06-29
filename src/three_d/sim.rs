@@ -9,6 +9,11 @@ pub struct ThreeDSimulator {
     current_cells: HashMap<Vector2D, Cell>,
     history: Vec<HashMap<Vector2D, Cell>>,
     current_time: u32,
+    all_time_min_x: i32,
+    all_time_max_x: i32,
+    all_time_min_y: i32,
+    all_time_max_y: i32,
+    all_time_max_t: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,37 +36,65 @@ pub enum Cell {
 
 impl ThreeDSimulator {
     pub fn new(board: ThreeDBoard, a: i64, b: i64) -> Self {
-        let mut current_cells = HashMap::new();
+        let mut cells = HashMap::new();
         for (y, row) in board.board.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
                 let pos = Vector2D::new(x as i32, y as i32);
                 match *cell {
                     BoardCell::SimCell(cell) => {
-                        current_cells.insert(pos, cell);
+                        cells.insert(pos, cell);
                     }
                     BoardCell::InputA => {
-                        current_cells.insert(pos, Cell::Data(a));
+                        cells.insert(pos, Cell::Data(a));
                     }
                     BoardCell::InputB => {
-                        current_cells.insert(pos, Cell::Data(b));
+                        cells.insert(pos, Cell::Data(b));
                     }
                     BoardCell::Empty => {}
                 }
             }
         }
+
+        let mut min_x = i32::MAX;
+        let mut max_x = i32::MIN;
+        let mut min_y = i32::MAX;
+        let mut max_y = i32::MIN;
+        for pos in cells.keys() {
+            min_x = min_x.min(pos.x);
+            max_x = max_x.max(pos.x);
+            min_y = min_y.min(pos.y);
+            max_y = max_y.max(pos.y);
+        }
+
         Self {
-            current_cells,
-            history: vec![],
+            current_cells: cells,
             current_time: 1,
+            all_time_min_x: min_x,
+            all_time_max_x: max_x,
+            all_time_min_y: min_y,
+            all_time_max_y: max_y,
+            ..Default::default()
         }
     }
 
-    pub fn step(&mut self) -> Result<bool, Vector2D> {
+    pub fn time(&self) -> u32 {
+        self.current_time
+    }
+
+    pub fn score(&self) -> u32 {
+        (self.all_time_max_x - self.all_time_min_x + 1) as u32
+            * (self.all_time_max_y - self.all_time_min_y + 1) as u32
+            * self.all_time_max_t
+    }
+
+    pub fn step(&mut self) -> Result<Option<i64>, Vector2D> {
         enum Action {
             Erase(Vector2D),
             Write(Vector2D, Cell),
+            TimeTravel(u32, Vector2D, i64),
         }
         let mut actions = vec![];
+
         for (pos, cell) in self.current_cells.iter() {
             match *cell {
                 Cell::Data(_) => {}
@@ -200,14 +233,50 @@ impl ThreeDSimulator {
                         }
                     }
                 }
-                Cell::TimeWarp => todo!(),
+                Cell::TimeWarp => {
+                    if let (Some(cell_dx), Some(cell_dy), Some(cell_dt), Some(cell_v)) = (
+                        self.current_cells.get(&pos.left()),
+                        self.current_cells.get(&pos.right()),
+                        self.current_cells.get(&pos.down()),
+                        self.current_cells.get(&pos.up()),
+                    ) {
+                        match (cell_dx, cell_dy, cell_dt, cell_v) {
+                            (Cell::Data(dx), Cell::Data(dy), Cell::Data(dt), Cell::Data(v)) => {
+                                if *dt <= 0 {
+                                    return Err(*pos);
+                                }
+                                actions.push(Action::TimeTravel(
+                                    self.current_time - (*dt as u32),
+                                    *pos - Vector2D::new(*dx as i32, *dy as i32),
+                                    *v,
+                                ));
+                            }
+                            _ => return Err(*pos),
+                        }
+                    }
+                }
                 Cell::Submit => {}
             }
         }
 
-        let mut new_cells = HashMap::new();
+        if actions.is_empty() {
+            // TODO: a better error
+            return Err(Vector2D::new(0, 0));
+        }
+
+        let time_travels = actions
+            .iter()
+            .filter_map(|action| match action {
+                Action::TimeTravel(time, pos, v) => Some((*time, *pos, *v)),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        // First, process the new state without time travels, because submits take priority
+        let mut new_cells = self.current_cells.clone();
 
         let mut moved_to_cells = HashSet::new();
+        let mut submitted_value = None;
         for action in actions {
             match action {
                 Action::Erase(pos) => {
@@ -217,17 +286,75 @@ impl ThreeDSimulator {
                     if moved_to_cells.contains(&pos) {
                         return Err(pos);
                     }
+                    if let Some(Cell::Submit) = new_cells.get(&pos) {
+                        if submitted_value.is_some() {
+                            return Err(pos);
+                        }
+                        if let Cell::Data(cell) = cell {
+                            submitted_value = Some(cell);
+                        } else {
+                            return Err(pos);
+                        }
+                    }
                     new_cells.insert(pos, cell);
                     moved_to_cells.insert(pos);
+                }
+                Action::TimeTravel(_, _, _) => {
+                    // Processed below
                 }
             }
         }
 
-        self.history
-            .push(std::mem::replace(&mut self.current_cells, new_cells));
-        self.current_time += 1;
+        for pos in new_cells.keys() {
+            self.all_time_min_x = self.all_time_min_x.min(pos.x);
+            self.all_time_max_x = self.all_time_max_x.max(pos.x);
+            self.all_time_min_y = self.all_time_min_y.min(pos.y);
+            self.all_time_max_y = self.all_time_max_y.max(pos.y);
+        }
 
-        Ok(false)
+        if submitted_value.is_some() {
+            return Ok(submitted_value);
+        }
+
+        if !time_travels.is_empty() {
+            let mut target_times = HashSet::new();
+            for (time, _, _) in &time_travels {
+                target_times.insert(*time);
+            }
+            if target_times.len() != 1 {
+                // TODO: a better error
+                return Err(Vector2D::new(0, 0));
+            }
+            let target_time = target_times.into_iter().next().unwrap();
+
+            let mut target_writes = HashMap::new();
+            for (_, pos, value) in &time_travels {
+                if let Some(v) = target_writes.get(pos) {
+                    if *v != value {
+                        return Err(*pos);
+                    }
+                }
+                target_writes.insert(*pos, value);
+            }
+
+            self.history.truncate(target_time as usize);
+            // Discard the current new state and fetch it from the history
+            new_cells = self.history.pop().unwrap();
+
+            for (pos, value) in target_writes {
+                new_cells.insert(pos, Cell::Data(*value));
+            }
+
+            self.current_cells = new_cells;
+            self.current_time = target_time;
+        } else {
+            self.history
+                .push(std::mem::replace(&mut self.current_cells, new_cells));
+            self.current_time += 1;
+            self.all_time_max_t = self.all_time_max_t.max(self.current_time);
+        }
+
+        Ok(None)
     }
 
     pub fn as_board(&self) -> ThreeDBoard {

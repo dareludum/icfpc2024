@@ -27,13 +27,17 @@ impl ThreeDCommand {
         let mut sim = ThreeDSimulator::new(board, self.a, self.b);
         loop {
             let result = sim.step();
-            println!("Board:\n{}", sim.as_board().save());
+            println!("Board[t={}]:\n{}", sim.time(), sim.as_board().save());
             match result {
-                Ok(true) => {
-                    println!("Program finished successfully");
+                Ok(Some(v)) => {
+                    println!(
+                        "Program finished successfully: {} (score={})",
+                        v,
+                        sim.score()
+                    );
                     break;
                 }
-                Ok(false) => {}
+                Ok(None) => {}
                 Err(pos) => {
                     println!("Error at position: {:?}", pos);
                     break;
