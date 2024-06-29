@@ -1,4 +1,7 @@
-use std::{path::PathBuf, thread, time};
+use std::{
+    path::{Path, PathBuf},
+    thread, time,
+};
 
 use crate::{geometry::Vector2D, three_d::sim::ThreeDSimulator};
 
@@ -58,6 +61,9 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
     let mut current_sim_result = Ok(None);
 
     let (mut rh, thread) = raylib::init().size(WINDOW_WIDTH, WINDOW_HEIGHT).build();
+
+    update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
+
     while !rh.window_should_close() {
         {
             let mut d = rh.begin_drawing(&thread);
@@ -148,11 +154,11 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
                 KeyboardKey::KEY_A => {
                     sim.step_back();
                     current_sim_result = Ok(None);
-                    update_window_title(&rh, &thread, &sim, current_sim_result);
+                    update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                 }
                 KeyboardKey::KEY_D => {
                     current_sim_result = sim.step();
-                    update_window_title(&rh, &thread, &sim, current_sim_result);
+                    update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                 }
                 KeyboardKey::KEY_O if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
                     let cwd = std::env::current_dir().expect("Failed to get current directory");
@@ -167,7 +173,7 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
                         let board = ThreeDBoard::load(&board_file);
                         sim = ThreeDSimulator::new(board, a, b);
                         current_sim_result = Ok(None);
-                        update_window_title(&rh, &thread, &sim, current_sim_result);
+                        update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                     }
                 }
                 KeyboardKey::KEY_S if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
@@ -203,7 +209,29 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
                     state.edit_mode = !state.edit_mode;
                     if !state.edit_mode {
                         if let Ok(v) = state.edited_value.parse::<i64>() {
-                            sim.set_cell(state.selected_pos, Cell::Data(v));
+                            match sim.cells().get(&state.selected_pos) {
+                                Some(Cell::InputA) => {
+                                    sim.set_a(v);
+                                    update_window_title(
+                                        &rh,
+                                        &thread,
+                                        &sim,
+                                        current_sim_result,
+                                        &filepath,
+                                    );
+                                }
+                                Some(Cell::InputB) => {
+                                    sim.set_b(v);
+                                    update_window_title(
+                                        &rh,
+                                        &thread,
+                                        &sim,
+                                        current_sim_result,
+                                        &filepath,
+                                    );
+                                }
+                                _ => sim.set_cell(state.selected_pos, Cell::Data(v)),
+                            }
                         }
                         state.edited_value.clear();
                     }
@@ -336,11 +364,15 @@ fn update_window_title(
     thread: &RaylibThread,
     sim: &ThreeDSimulator,
     current_sim_result: Result<Option<i64>, Vector2D>,
+    path: &Path,
 ) {
     rh.set_window_title(
         thread,
         &format!(
-            "t={} score={} result={}",
+            "[{}] a={} b={} t={} score={} result={}",
+            path.file_name().unwrap().to_string_lossy(),
+            sim.a(),
+            sim.b(),
             sim.time(),
             sim.score(),
             match current_sim_result {

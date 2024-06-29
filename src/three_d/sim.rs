@@ -85,6 +85,22 @@ impl ThreeDSimulator {
             * self.all_time_max_t
     }
 
+    pub fn a(&self) -> i64 {
+        self.a
+    }
+
+    pub fn set_a(&mut self, a: i64) {
+        self.a = a;
+    }
+
+    pub fn b(&self) -> i64 {
+        self.b
+    }
+
+    pub fn set_b(&mut self, b: i64) {
+        self.b = b;
+    }
+
     pub fn cells(&self) -> &HashMap<Vector2D, Cell> {
         &self.current_cells
     }
