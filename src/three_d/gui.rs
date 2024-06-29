@@ -108,6 +108,8 @@ Simulation:
   Q: undo (revert to the previous state, undoes time travel too)
   Shift+Q: step back in simulation history (time travel)
   E: execute one step of the simulation
+  W: run the simulation (small delay between steps for visual feedback)
+  Shift+W: run the simulation without delay
 
 ESC: close the program
 "#;
@@ -195,8 +197,21 @@ ESC: close the program
             }
         }
 
-        let need_to_sleep = true;
-        if let Some(key) = rh.get_key_pressed() {
+        let mut delay_ms = 5;
+        if rh.is_key_down(KeyboardKey::KEY_W) {
+            let result = sim.step();
+            if result != Ok(SimulationStepResult::AlreadyFinished) {
+                current_sim_result = result;
+                update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
+                if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                    || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT)
+                {
+                    delay_ms = 0;
+                } else {
+                    delay_ms = 50;
+                }
+            }
+        } else if let Some(key) = rh.get_key_pressed() {
             match key {
                 KeyboardKey::KEY_Q => {
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
@@ -437,8 +452,8 @@ ESC: close the program
             }
         }
 
-        if need_to_sleep {
-            thread::sleep(time::Duration::from_millis(5));
+        if delay_ms > 0 {
+            thread::sleep(time::Duration::from_millis(delay_ms));
         }
     }
 }
