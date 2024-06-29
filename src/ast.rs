@@ -106,12 +106,11 @@ pub enum Node {
     // even though lambda and apply technically are unuary / binary operators,
     // they are treated separately as they have to deal with scoping / evaluation
     Lambda {
-        #[node_label]
         var: VarId,
         #[tree]
         body: NodeRef,
     },
-    Variable(VarId),
+    Variable(#[node_label] VarId),
     Apply {
         #[tree]
         f: NodeRef,
