@@ -140,6 +140,18 @@ pub fn gui_main(board: ThreeDBoard, a: i64, b: i64) {
         let need_to_sleep = true;
         if let Some(key) = rh.get_key_pressed() {
             match key {
+                KeyboardKey::KEY_LEFT => {
+                    state.selected_pos = state.selected_pos.map(|pos| pos.left());
+                }
+                KeyboardKey::KEY_RIGHT => {
+                    state.selected_pos = state.selected_pos.map(|pos| pos.right());
+                }
+                KeyboardKey::KEY_UP => {
+                    state.selected_pos = state.selected_pos.map(|pos| pos.up());
+                }
+                KeyboardKey::KEY_DOWN => {
+                    state.selected_pos = state.selected_pos.map(|pos| pos.down());
+                }
                 KeyboardKey::KEY_A => {
                     sim.step_back();
                     current_sim_result = Ok(None);
