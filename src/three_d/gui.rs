@@ -106,7 +106,7 @@ File management:
 
 Simulation:
   Q: undo (revert to the previous state, undoes time travel too)
-  Ctrl+Q: step back in simulation history (time travel)
+  Shift+Q: step back in simulation history (time travel)
   E: execute one step of the simulation
 
 ESC: close the program
