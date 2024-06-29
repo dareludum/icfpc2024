@@ -104,8 +104,8 @@ File management:
   dCtrl+Shift+S: save the board as
 
 Simulation:
-  Q: step back in simulation history (time travel)
-  Ctrl+Q: undo (revert to the previous state, undoes time travel too)
+  Q: undo (revert to the previous state, undoes time travel too)
+  Ctrl+Q: step back in simulation history (time travel)
   E: execute one step of the simulation
 
 ESC: close the program
@@ -201,16 +201,14 @@ ESC: close the program
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                         || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT)
                     {
-                        if let Some(prev_sim) = state.history.pop() {
-                            sim = prev_sim;
-                            current_sim_result = Ok(SimulationStepResult::Ok);
-                        }
-                    } else {
                         let result = sim.step_back();
                         if result != SimulationStepResult::AlreadyFinished {
                             state.history.push(sim.clone());
                             current_sim_result = Ok(result);
                         }
+                    } else if let Some(prev_sim) = state.history.pop() {
+                        sim = prev_sim;
+                        current_sim_result = Ok(SimulationStepResult::Ok);
                     }
                     update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                 }
