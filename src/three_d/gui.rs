@@ -12,6 +12,7 @@ struct GuiState {
     height: i32,
     viewport_offset: Vector2D,
     viewport_drag_point: Option<Vector2>,
+    selected_pos: Option<Vector2D>,
 }
 
 #[allow(dead_code)]
@@ -62,6 +63,11 @@ pub fn gui_main(board: ThreeDBoard, a: i64, b: i64) {
         let mouse_pos = rh.get_mouse_position();
 
         if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
+            // TODO: cell size
+            state.selected_pos = Some(Vector2D::new(
+                (mouse_pos.x as i32 - state.viewport_offset.x) / 30,
+                (mouse_pos.y as i32 - state.viewport_offset.y) / 30,
+            ));
         } else if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
             state.viewport_drag_point = Some(mouse_pos);
         } else {
@@ -166,6 +172,110 @@ pub fn gui_main(board: ThreeDBoard, a: i64, b: i64) {
                             }
                         ),
                     );
+                }
+                // <
+                KeyboardKey::KEY_COMMA
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                        || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
+                {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::MoveLeft);
+                    }
+                }
+                // >
+                KeyboardKey::KEY_PERIOD
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                        || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
+                {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::MoveRight);
+                    }
+                }
+                // ^
+                KeyboardKey::KEY_SIX
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                        || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
+                {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::MoveUp);
+                    }
+                }
+                // v
+                KeyboardKey::KEY_V => {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::MoveDown);
+                    }
+                }
+                // +
+                KeyboardKey::KEY_EQUAL
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                        || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
+                {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::Add);
+                    }
+                }
+                // -
+                KeyboardKey::KEY_MINUS => {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::Subtract);
+                    }
+                }
+                // *
+                KeyboardKey::KEY_EIGHT => {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::Multiply);
+                    }
+                }
+                // /
+                KeyboardKey::KEY_SLASH => {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::Divide);
+                    }
+                }
+                // %
+                KeyboardKey::KEY_FIVE
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                        || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
+                {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::Modulo);
+                    }
+                }
+                // =
+                KeyboardKey::KEY_EQUAL => {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::Equal);
+                    }
+                }
+                // #
+                KeyboardKey::KEY_THREE
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                        || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
+                {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::NotEqual);
+                    }
+                }
+                // @
+                KeyboardKey::KEY_TWO
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                        || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT) =>
+                {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::TimeWarp);
+                    }
+                }
+                // S
+                KeyboardKey::KEY_S => {
+                    if let Some(pos) = state.selected_pos {
+                        sim.set_cell(pos, Cell::Submit);
+                    }
+                }
+                KeyboardKey::KEY_DELETE => {
+                    if let Some(pos) = state.selected_pos {
+                        sim.remove_cell(pos);
+                    }
                 }
                 _ => {}
             }
@@ -316,6 +426,16 @@ fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator)
                 );
             }
         }
+    }
+
+    if let Some(pos) = state.selected_pos {
+        d.draw_rectangle_lines(
+            state.viewport_offset.x + pos.x * CELL_SIZE,
+            state.viewport_offset.y + pos.y * CELL_SIZE + 1,
+            CELL_SIZE - 1,
+            CELL_SIZE - 1,
+            colors::SOLARIZED_BASE01,
+        );
     }
 
     let start_x = state.viewport_offset.x % CELL_SIZE;

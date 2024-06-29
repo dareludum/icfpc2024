@@ -392,4 +392,12 @@ impl ThreeDSimulator {
             self.current_cells = self.history.pop().unwrap();
         }
     }
+
+    pub fn remove_cell(&mut self, pos: Vector2D) {
+        self.current_cells.remove(&pos);
+    }
+
+    pub fn set_cell(&mut self, pos: Vector2D, cell: Cell) {
+        self.current_cells.insert(pos, cell);
+    }
 }
