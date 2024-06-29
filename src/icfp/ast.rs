@@ -147,4 +147,20 @@ impl Node {
     pub fn pretty_print(&self, f: &mut dyn std::io::Write) -> Result<(), std::io::Error> {
         writeln!(f, "{}", AsTree::new(self))
     }
+
+    pub fn var(id: VarId) -> NodeRef {
+        Rc::new(Node::Variable(id))
+    }
+
+    pub fn apply(f: NodeRef, value: NodeRef) -> NodeRef {
+        Rc::new(Node::Apply { f, value })
+    }
+
+    pub fn lambda(var: VarId, body: NodeRef) -> NodeRef {
+        Rc::new(Node::Lambda { var, body })
+    }
+
+    pub fn bind(var: VarId, value: NodeRef, body: NodeRef) -> NodeRef {
+        Self::apply(Self::lambda(var, body), value)
+    }
 }

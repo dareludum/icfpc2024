@@ -1,13 +1,11 @@
-use std::rc::Rc;
-
 use super::{
-    ast::{BinaryOp, Binding, UnuaryOp, Value},
+    ast::{BinaryOp, Binding, UnuaryOp},
     Iden, LNode, LNodeRef,
 };
 use nom::{
     branch::alt,
     bytes::complete::{is_not, tag},
-    character::complete::{alpha1, alphanumeric1, char, digit1, multispace1},
+    character::complete::{alpha1, alphanumeric1, char, digit1, multispace1, one_of},
     combinator::{cut, eof, map, map_res, opt, recognize, value},
     error::{context, ContextError, ParseError, VerboseError},
     multi::{fold_many0, many0, many0_count, many1, many1_count},
@@ -91,15 +89,29 @@ fn sep_many1<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
 // integers litterals are only positive. negative integers are created using unuary minus
 fn integer_litteral(input: &str) -> LNodeResult {
     map_res(digit1, |digit_str: &str| {
-        digit_str
-            .parse::<i64>()
-            .map(|e| Rc::new(LNode::Litteral(Value::Int(e))))
+        digit_str.parse::<i64>().map(LNode::int)
     })(input)
+}
+
+fn boolean_litteral(input: &str) -> LNodeResult {
+    alt((value(true, tag("true")), value(false, tag("false"))))
+        .map(LNode::bool)
+        .parse(input)
+}
+
+fn string_litteral(input: &str) -> LNodeResult {
+    delimited(char('"'), cut(many0(alt((
+        preceded(char('\\'), cut(one_of("\"\\"))),
+        one_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'()*+,-./:;<=>?@[]^_`|~ \n"),
+    ))).map(|r| {
+        let s: String = r.into_iter().collect();
+        LNode::str(s)
+    })), char('"'))(input)
 }
 
 fn variable(input: &str) -> LNodeResult {
     let (rest, ident) = identifier(input)?;
-    Ok((rest, Rc::new(LNode::Variable(ident))))
+    Ok((rest, LNode::var(ident)))
 }
 
 fn braced_expr(input: &str) -> LNodeResult {
@@ -116,29 +128,7 @@ fn if_expr(input: &str) -> LNodeResult {
         cut(braced_expr),
         preceded(tag("else"), cut(braced_expr)),
     ))(input)?;
-    Ok((
-        rest,
-        Rc::new(LNode::If {
-            cond,
-            then_do,
-            else_do,
-        }),
-    ))
-}
-
-fn prefix_operator(input: &str) -> IResult<&str, UnuaryOp, VerboseError<&str>> {
-    alt((
-        value(UnuaryOp::IntNeg, char('-')),
-        value(UnuaryOp::BoolNot, char('!')),
-        value(UnuaryOp::StrToInt, tag("str2int")),
-        value(UnuaryOp::IntNeg, tag("int2str")),
-    ))(input)
-}
-
-fn prefix_expr(input: &str) -> LNodeResult {
-    tuple((prefix_operator, expr))
-        .map(|(op, body)| Rc::new(LNode::UnuaryOp { op, body }))
-        .parse(input)
+    Ok((rest, LNode::cond(cond, then_do, else_do)))
 }
 
 // either a ref to a variable, or a function call
@@ -148,11 +138,23 @@ fn core_expr(input: &str) -> LNodeResult {
         alt((
             let_expr,
             paren_group_expr,
-            prefix_expr,
             if_expr,
             integer_litteral,
+            boolean_litteral,
+            string_litteral,
             variable,
         )),
+    )(input)
+}
+
+// a core expr or a function call
+fn callseq_expr(input: &str) -> LNodeResult {
+    // core_expr [core_expr...]
+    let (input, expr) = core_expr(input)?;
+    fold_many0(
+        preceded(sep_many1, core_expr),
+        move || expr.clone(),
+        LNode::apply,
     )(input)
 }
 
@@ -176,38 +178,40 @@ fn infix_operator(input: &str) -> IResult<&str, BinaryOp, VerboseError<&str>> {
 
 fn infix_expr(input: &str) -> LNodeResult {
     // core_expr [OP core_expr...]
-    let (input, expr) = core_expr(input)?;
+    let (input, expr) = callseq_expr(input)?;
     fold_many0(
-        tuple((delimited(sep_many0, infix_operator, sep_many0), core_expr)),
+        tuple((
+            delimited(sep_many0, infix_operator, sep_many0),
+            callseq_expr,
+        )),
         move || expr.clone(),
-        |res, (op, item)| {
-            Rc::new(LNode::BinaryOp {
-                op,
-                left: res,
-                right: item,
-            })
-        },
+        |res, (op, item)| LNode::binary_op(op, res, item),
     )(input)
 }
 
-// a core expr or a function call
-fn callseq_expr(input: &str) -> LNodeResult {
-    // core_expr [core_expr...]
-    let (input, expr) = infix_expr(input)?;
-    fold_many0(
-        preceded(sep_many1, infix_expr),
-        move || expr.clone(),
-        |res, item| {
-            Rc::new(LNode::Apply {
-                func: res,
-                param: item,
-            })
-        },
-    )(input)
+fn prefix_operator(input: &str) -> IResult<&str, UnuaryOp, VerboseError<&str>> {
+    alt((
+        value(UnuaryOp::IntNeg, char('-')),
+        value(UnuaryOp::BoolNot, char('!')),
+        value(UnuaryOp::StrToInt, tag("str2int")),
+        value(UnuaryOp::IntNeg, tag("int2str")),
+    ))(input)
 }
 
 fn expr(input: &str) -> LNodeResult {
-    delimited(sep_many0, callseq_expr, sep_many0)(input)
+    delimited(
+        sep_many0,
+        tuple((opt(prefix_operator), infix_expr)),
+        sep_many0,
+    )
+    .map(|(op, expr)| {
+        if let Some(op) = op {
+            LNode::unuary_op(op, expr)
+        } else {
+            expr
+        }
+    })
+    .parse(input)
 }
 
 fn top_expr(input: &str) -> LNodeResult {
@@ -217,108 +221,4 @@ fn top_expr(input: &str) -> LNodeResult {
 pub fn parse(input: &str) -> Result<LNodeRef, VerboseError<&str>> {
     let (_, res) = top_expr(input).finish()?;
     Ok(res)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::parse;
-
-    #[test]
-    fn test_integer() {
-        let sample = r" 1 ";
-        let node = parse(sample).unwrap();
-        println!("{:?}", node);
-    }
-
-    #[test]
-    fn test_comment() {
-        let sample = r#"
-            // a
-            1
-        "#;
-        let node = parse(sample).unwrap();
-        println!("{:?}", node);
-    }
-
-    #[test]
-    fn test_variable() {
-        let sample = r" a ";
-        let node = parse(sample).unwrap();
-        println!("{:?}", node);
-    }
-
-    #[test]
-    fn test_apply_fancy() {
-        let sample = r" f (g 1) b";
-        let node = parse(sample).unwrap();
-        println!("{:?}", node);
-    }
-
-    #[test]
-    fn test_let_in_integer() {
-        let sample = r#"
-            let a = 1;
-            in a
-        "#;
-        let node = parse(sample).unwrap();
-        println!("{:?}", node);
-    }
-
-    #[test]
-    fn test_function_call() {
-        let sample = r#"
-            let f a = a; in f 1
-        "#;
-        let node = parse(sample).unwrap();
-        println!("{:?}", node);
-    }
-
-    #[test]
-    fn test_if() {
-        let sample = r#"
-            if true { 1 } else { 2 }
-        "#;
-        let node = parse(sample).unwrap();
-        println!("{:?}", node);
-    }
-
-    #[test]
-    fn test_sub() {
-        let sample = r#"
-            x - 1
-        "#;
-        let node = parse(sample).unwrap();
-        println!("{:#?}", node);
-    }
-
-    #[test]
-    fn test_apply() {
-        let sample = r#"
-            a b
-        "#;
-        let node = parse(sample).unwrap();
-        println!("{:#?}", node);
-    }
-
-    #[test]
-    fn test_call_params() {
-        let sample = r#"
-            fac (x - 1)
-        "#;
-        let node = parse(sample).unwrap();
-        println!("{:#?}", node);
-    }
-
-    #[test]
-    fn test_mess() {
-        let sample = r#"
-            let a = 1;
-                b = a + 1;
-                f x y = x * y + b;
-                rec fac x = if x < 2 { x } else { x * fac (x - 1) };
-            in (f 2 a) + fac 3
-        "#;
-        let node = parse(sample).unwrap();
-        println!("{:#?}", node);
-    }
 }

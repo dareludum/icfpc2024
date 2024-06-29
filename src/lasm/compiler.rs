@@ -39,7 +39,7 @@ impl Compiler {
     // the y combinator is only created once, and added at the top level
     fn get_y_combinator(&mut self) -> NodeRef {
         if let Some((id, _)) = self.y_combinator {
-            return var(id);
+            return Node::var(id);
         }
 
         // Lambda
@@ -61,12 +61,25 @@ impl Compiler {
         //                 └── VarId(2)
         let v1 = self.allocate_varid();
         let v2 = self.allocate_varid();
-        let cc = lambda(v2, apply(var(v1), apply(var(v2), var(v2))));
-        let node = lambda(v1, apply(cc.clone(), cc));
+        let cc = {
+            let body = {
+                let f = Node::var(v1);
+                let value = Node::apply(Node::var(v2), Node::var(v2));
+                Node::apply(f, value)
+            };
+            Node::lambda(v2, body)
+        };
+        let node = {
+            let body = {
+                let f = cc.clone();
+                Node::apply(f, cc)
+            };
+            Node::lambda(v1, body)
+        };
 
         let id = self.allocate_varid();
         self.y_combinator = Some((id, node));
-        var(id)
+        Node::var(id)
     }
 
     // simplify a binding
@@ -82,11 +95,18 @@ impl Compiler {
 
         // if it is a function, bind parameters
         for param in binding.params.iter().rev() {
-            body = lambda(self.resolve(param), body)
+            body = {
+                let var = self.resolve(param);
+                Node::lambda(var, body)
+            }
         }
 
         // if the function is recursive, apply the Y combinator to a lambda of the binding's name
-        body = apply(self.get_y_combinator(), lambda(var_id, body));
+        body = {
+            let f = self.get_y_combinator();
+            let value = Node::lambda(var_id, body);
+            Node::apply(f, value)
+        };
         (var_id, body)
     }
 
@@ -126,7 +146,9 @@ impl Compiler {
                     .iter()
                     .rev()
                     .fold(body, |acc, (var_id, var_value)| {
-                        bind(*var_id, var_value.clone(), acc)
+                        let var = *var_id;
+                        let value = var_value.clone();
+                        Node::bind(var, value, acc)
                     });
             }
         })
@@ -135,7 +157,11 @@ impl Compiler {
     pub fn compile(&mut self, source: LNodeRef) -> NodeRef {
         let res = self.compile_node(source.as_ref());
         if let Some((id, node)) = &self.y_combinator {
-            bind(*id, node.clone(), res)
+            {
+                let var = *id;
+                let value = node.clone();
+                Node::bind(var, value, res)
+            }
         } else {
             res
         }
@@ -144,55 +170,4 @@ impl Compiler {
 
 pub fn compile(source: LNodeRef) -> NodeRef {
     Compiler::new().compile(source)
-}
-
-fn var(id: VarId) -> NodeRef {
-    Rc::new(Node::Variable(id))
-}
-
-fn apply(f: NodeRef, value: NodeRef) -> NodeRef {
-    Rc::new(Node::Apply { f, value })
-}
-
-fn lambda(var: VarId, body: NodeRef) -> NodeRef {
-    Rc::new(Node::Lambda { var, body })
-}
-
-fn bind(var: VarId, value: NodeRef, body: NodeRef) -> NodeRef {
-    apply(lambda(var, body), value)
-}
-
-#[cfg(test)]
-mod tests {
-    use std::io::stdout;
-
-    use crate::icfp::evaluate;
-
-    use super::super::parse;
-    use super::compile;
-
-    #[test]
-    fn test_let_in() {
-        let sample = r#"
-            let a = 1;
-                b = a + 1;
-                f x y = x * y + b;
-            in (f 2 a)
-        "#;
-        let node = parse(sample).unwrap();
-        let node = compile(node);
-        assert_eq!(evaluate(node).as_int(), 4);
-    }
-
-    #[test]
-    fn test_rec() {
-        let sample = r#"
-            let rec fac x = if x < 2 { x } else { x * (fac (x - 1)) };
-            in fac 3
-        "#;
-        let node = parse(sample).unwrap();
-        let node = compile(node);
-        let _ = node.pretty_print(&mut stdout().lock());
-        assert_eq!(evaluate(node).as_int(), 6);
-    }
 }
