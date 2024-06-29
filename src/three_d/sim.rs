@@ -17,6 +17,7 @@ pub struct ThreeDSimulator {
     a: i64,
     b: i64,
     steps_taken: u32,
+    result: Option<i64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,6 +38,13 @@ pub enum Cell {
     Submit,
     InputA,
     InputB,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SimulationStepResult {
+    Ok,
+    Finished(i64),
+    AlreadyFinished,
 }
 
 impl ThreeDSimulator {
@@ -74,6 +82,7 @@ impl ThreeDSimulator {
             a,
             b,
             steps_taken: 0,
+            result: None,
         }
     }
 
@@ -111,7 +120,11 @@ impl ThreeDSimulator {
         &self.current_cells
     }
 
-    pub fn step(&mut self) -> Result<Option<i64>, Vector2D> {
+    pub fn step(&mut self) -> Result<SimulationStepResult, Vector2D> {
+        if self.result.is_some() {
+            return Ok(SimulationStepResult::AlreadyFinished);
+        }
+
         self.steps_taken += 1;
         if self.steps_taken > 1_000_000 {
             // TODO: a better error
@@ -139,7 +152,7 @@ impl ThreeDSimulator {
             }
 
             self.current_time += 1;
-            return Ok(None);
+            return Ok(SimulationStepResult::Ok);
         }
 
         enum Action {
@@ -368,8 +381,9 @@ impl ThreeDSimulator {
             self.all_time_max_y = self.all_time_max_y.max(pos.y);
         }
 
-        if submitted_value.is_some() {
-            return Ok(submitted_value);
+        if let Some(v) = submitted_value {
+            self.result = Some(v);
+            return Ok(SimulationStepResult::Finished(v));
         }
 
         if !time_travels.is_empty() {
@@ -410,7 +424,7 @@ impl ThreeDSimulator {
             self.all_time_max_t = self.all_time_max_t.max(self.current_time);
         }
 
-        Ok(None)
+        Ok(SimulationStepResult::Ok)
     }
 
     pub fn as_board(&self) -> ThreeDBoard {
@@ -436,12 +450,16 @@ impl ThreeDSimulator {
         ThreeDBoard { board }
     }
 
-    pub fn step_back(&mut self) {
+    pub fn step_back(&mut self) -> SimulationStepResult {
         // This is somewhat wrong, but it's clearer for the GUI
-        self.steps_taken += 1;
         if self.current_time > 0 {
+            self.result = None;
+            self.steps_taken += 1;
             self.current_time -= 1;
             self.current_cells = self.history.pop().unwrap();
+            SimulationStepResult::Ok
+        } else {
+            SimulationStepResult::AlreadyFinished
         }
     }
 

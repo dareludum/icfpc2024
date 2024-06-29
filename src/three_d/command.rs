@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use argh::FromArgs;
 
-use crate::three_d::gui::gui_main;
+use crate::three_d::{gui::gui_main, sim::SimulationStepResult};
 
 use super::{board::ThreeDBoard, sim::ThreeDSimulator};
 
@@ -40,7 +40,8 @@ impl ThreeDCommand {
             let result = sim.step();
             println!("Board[t={}]:\n{}", sim.time(), sim.as_board().save());
             match result {
-                Ok(Some(v)) => {
+                Ok(SimulationStepResult::Ok) => {}
+                Ok(SimulationStepResult::Finished(v)) => {
                     println!(
                         "Program finished successfully: {} (score={})",
                         v,
@@ -48,7 +49,7 @@ impl ThreeDCommand {
                     );
                     break;
                 }
-                Ok(None) => {}
+                Ok(SimulationStepResult::AlreadyFinished) => unreachable!(),
                 Err(pos) => {
                     println!("Error at position: {:?}", pos);
                     break;

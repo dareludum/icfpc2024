@@ -3,7 +3,10 @@ use std::{
     thread, time,
 };
 
-use crate::{geometry::Vector2D, three_d::sim::ThreeDSimulator};
+use crate::{
+    geometry::Vector2D,
+    three_d::sim::{SimulationStepResult, ThreeDSimulator},
+};
 
 use super::{board::ThreeDBoard, sim::Cell};
 
@@ -59,7 +62,7 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
     let mut sim = ThreeDSimulator::new(board, a, b);
 
     #[allow(unused_assignments)]
-    let mut current_sim_result = Ok(None);
+    let mut current_sim_result = Ok(SimulationStepResult::Ok);
 
     let (mut rh, thread) = raylib::init().size(WINDOW_WIDTH, WINDOW_HEIGHT).build();
 
@@ -200,18 +203,27 @@ ESC: close the program
                     {
                         if let Some(prev_sim) = state.history.pop() {
                             sim = prev_sim;
+                            current_sim_result = Ok(SimulationStepResult::Ok);
                         }
                     } else {
-                        state.history.push(sim.clone());
-                        sim.step_back();
+                        let result = sim.step_back();
+                        if result != SimulationStepResult::AlreadyFinished {
+                            state.history.push(sim.clone());
+                            current_sim_result = Ok(result);
+                        }
                     }
-                    current_sim_result = Ok(None);
                     update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                 }
                 KeyboardKey::KEY_E => {
-                    state.history.push(sim.clone());
-                    current_sim_result = sim.step();
-                    update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
+                    let result = sim.step();
+                    match result {
+                        Ok(SimulationStepResult::AlreadyFinished) => {}
+                        _ => {
+                            state.history.push(sim.clone());
+                            current_sim_result = result;
+                            update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
+                        }
+                    }
                 }
                 KeyboardKey::KEY_O if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
                     let cwd = std::env::current_dir().expect("Failed to get current directory");
@@ -225,7 +237,7 @@ ESC: close the program
                             .expect("Failed to read the board file");
                         let board = ThreeDBoard::load(&board_file);
                         sim = ThreeDSimulator::new(board, a, b);
-                        current_sim_result = Ok(None);
+                        current_sim_result = Ok(SimulationStepResult::Ok);
                         update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                     }
                 }
@@ -424,7 +436,7 @@ fn update_window_title(
     rh: &RaylibHandle,
     thread: &RaylibThread,
     sim: &ThreeDSimulator,
-    current_sim_result: Result<Option<i64>, Vector2D>,
+    current_sim_result: Result<SimulationStepResult, Vector2D>,
     path: &Path,
 ) {
     rh.set_window_title(
@@ -438,8 +450,10 @@ fn update_window_title(
             sim.steps_taken(),
             sim.score(),
             match current_sim_result {
-                Ok(Some(v)) => format!("{}", v),
-                Ok(None) => "<running>".to_string(),
+                Ok(SimulationStepResult::Finished(v)) => format!("{}", v),
+                Ok(SimulationStepResult::Ok) => "<running>".to_string(),
+                Ok(SimulationStepResult::AlreadyFinished) =>
+                    unreachable!("Must be handled elsewhere"),
                 Err(pos) => format!("<error at {:?}>", pos),
             }
         ),
