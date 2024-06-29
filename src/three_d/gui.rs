@@ -490,6 +490,24 @@ fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator)
                     colors::SOLARIZED_BLUE,
                 );
             }
+            Cell::InputA => {
+                d.draw_text(
+                    "A",
+                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
+                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
+                    25,
+                    colors::SOLARIZED_GREEN,
+                );
+            }
+            Cell::InputB => {
+                d.draw_text(
+                    "B",
+                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
+                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
+                    25,
+                    colors::SOLARIZED_GREEN,
+                );
+            }
         }
     }
 

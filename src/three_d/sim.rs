@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::geometry::Vector2D;
 
-use super::board::{BoardCell, ThreeDBoard};
+use super::board::ThreeDBoard;
 
 #[derive(Debug, Clone, Default)]
 pub struct ThreeDSimulator {
@@ -14,6 +14,8 @@ pub struct ThreeDSimulator {
     all_time_min_y: i32,
     all_time_max_y: i32,
     all_time_max_t: u32,
+    a: i64,
+    b: i64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,6 +34,8 @@ pub enum Cell {
     NotEqual,
     TimeWarp,
     Submit,
+    InputA,
+    InputB,
 }
 
 impl ThreeDSimulator {
@@ -40,17 +44,8 @@ impl ThreeDSimulator {
         for (y, row) in board.board.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
                 let pos = Vector2D::new(x as i32, y as i32);
-                match *cell {
-                    BoardCell::SimCell(cell) => {
-                        cells.insert(pos, cell);
-                    }
-                    BoardCell::InputA => {
-                        cells.insert(pos, Cell::Data(a));
-                    }
-                    BoardCell::InputB => {
-                        cells.insert(pos, Cell::Data(b));
-                    }
-                    BoardCell::Empty => {}
+                if let Some(cell) = *cell {
+                    cells.insert(pos, cell);
                 }
             }
         }
@@ -68,12 +63,15 @@ impl ThreeDSimulator {
 
         Self {
             current_cells: cells,
-            current_time: 1,
+            history: vec![],
+            current_time: 0,
             all_time_min_x: min_x,
             all_time_max_x: max_x,
             all_time_min_y: min_y,
             all_time_max_y: max_y,
-            ..Default::default()
+            all_time_max_t: 0,
+            a,
+            b,
         }
     }
 
@@ -92,6 +90,30 @@ impl ThreeDSimulator {
     }
 
     pub fn step(&mut self) -> Result<Option<i64>, Vector2D> {
+        if self.history.is_empty() {
+            self.history.push(self.current_cells.clone());
+
+            let mut input_a_positions = vec![];
+            let mut input_b_positions = vec![];
+            for pos in self.current_cells.keys() {
+                if self.current_cells.get(pos).unwrap() == &Cell::InputA {
+                    input_a_positions.push(*pos);
+                } else if self.current_cells.get(pos).unwrap() == &Cell::InputB {
+                    input_b_positions.push(*pos);
+                }
+            }
+
+            for pos in input_a_positions {
+                self.current_cells.insert(pos, Cell::Data(self.a));
+            }
+            for pos in input_b_positions {
+                self.current_cells.insert(pos, Cell::Data(self.b));
+            }
+
+            self.current_time += 1;
+            return Ok(None);
+        }
+
         enum Action {
             Erase(Vector2D),
             Write(Vector2D, Cell),
@@ -260,6 +282,8 @@ impl ThreeDSimulator {
                     }
                 }
                 Cell::Submit => {}
+                Cell::InputA => {}
+                Cell::InputB => {}
             }
         }
 
@@ -341,7 +365,7 @@ impl ThreeDSimulator {
                 target_writes.insert(*pos, value);
             }
 
-            self.history.truncate(target_time as usize);
+            self.history.truncate(target_time as usize + 1);
             // Discard the current new state and fetch it from the history
             new_cells = self.history.pop().unwrap();
 
@@ -373,21 +397,19 @@ impl ThreeDSimulator {
             max_y = max_y.max(pos.y);
         }
 
-        let mut board = vec![
-            vec![BoardCell::Empty; (max_x - min_x + 1) as usize];
-            (max_y - min_y + 1) as usize
-        ];
+        let mut board =
+            vec![vec![None; (max_x - min_x + 1) as usize]; (max_y - min_y + 1) as usize];
         for (pos, cell) in &self.current_cells {
             let x = (pos.x - min_x) as usize;
             let y = (pos.y - min_y) as usize;
-            board[y][x] = BoardCell::SimCell(*cell);
+            board[y][x] = Some(*cell);
         }
 
         ThreeDBoard { board }
     }
 
     pub fn step_back(&mut self) {
-        if self.current_time > 1 {
+        if self.current_time > 0 {
             self.current_time -= 1;
             self.current_cells = self.history.pop().unwrap();
         }
