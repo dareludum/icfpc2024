@@ -1,7 +1,4 @@
-use std::{
-    path::{Path, PathBuf},
-    thread, time,
-};
+use std::{path::PathBuf, thread, time};
 
 use crate::{
     geometry::Vector2D,
@@ -47,12 +44,16 @@ mod colors {
     pub static SOLARIZED_GREEN: Color = Color::new(0x85, 0x99, 0x00, 0xff);
 }
 
-pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
+pub fn gui_main(mut filepath: Option<PathBuf>, a: i64, b: i64) {
     const WINDOW_WIDTH: i32 = 1024;
     const WINDOW_HEIGHT: i32 = 768;
 
-    let board_file = std::fs::read_to_string(&filepath).expect("Failed to read the board file");
-    let board = ThreeDBoard::load(&board_file);
+    let board = if let Some(path) = filepath.as_ref() {
+        let board_file = std::fs::read_to_string(path).expect("Failed to read the board file");
+        ThreeDBoard::load(&board_file)
+    } else {
+        ThreeDBoard::default()
+    };
 
     let mut state = GuiState {
         width: WINDOW_WIDTH,
@@ -68,7 +69,7 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
 
     let (mut rh, thread) = raylib::init().size(WINDOW_WIDTH, WINDOW_HEIGHT).build();
 
-    update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
+    update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
 
     while !rh.window_should_close() {
         {
@@ -101,6 +102,7 @@ Mouse actions:
   Right button: drag the viewport
 
 File management:
+  Ctrl+N: new board
   Ctrl+O: open a board
   Ctrl+R: reload the current board
   Ctrl+S: save the board
@@ -212,7 +214,7 @@ Misc:
             let result = sim.step();
             if result != Ok(SimulationStepResult::AlreadyFinished) {
                 current_sim_result = result;
-                update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
+                update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
                 if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                     || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT)
                 {
@@ -236,7 +238,7 @@ Misc:
                         sim = prev_sim;
                         current_sim_result = Ok(SimulationStepResult::Ok);
                     }
-                    update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
+                    update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
                 }
                 KeyboardKey::KEY_E => {
                     state.history.push(sim.clone());
@@ -247,7 +249,13 @@ Misc:
                         }
                         _ => {
                             current_sim_result = result;
-                            update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
+                            update_window_title(
+                                &rh,
+                                &thread,
+                                &sim,
+                                current_sim_result,
+                                filepath.as_ref(),
+                            );
                         }
                     }
                 }
@@ -258,41 +266,58 @@ Misc:
                         .set_title("Open board")
                         .pick_file()
                     {
-                        filepath = path;
-                        let board_file = std::fs::read_to_string(&filepath)
+                        filepath = Some(path);
+                        let board_file = std::fs::read_to_string(filepath.as_ref().unwrap())
                             .expect("Failed to read the board file");
                         let board = ThreeDBoard::load(&board_file);
                         sim = ThreeDSimulator::new(board, a, b);
                         current_sim_result = Ok(SimulationStepResult::Ok);
                         state.history.clear();
                         center_viewport(&sim, &mut state);
-                        update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
+                        update_window_title(
+                            &rh,
+                            &thread,
+                            &sim,
+                            current_sim_result,
+                            filepath.as_ref(),
+                        );
                     }
                 }
                 KeyboardKey::KEY_R if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
-                    let board_file =
-                        std::fs::read_to_string(&filepath).expect("Failed to read the board file");
-                    let board = ThreeDBoard::load(&board_file);
-                    sim = ThreeDSimulator::new(board, a, b);
+                    if let Some(path) = filepath.as_ref() {
+                        let board_file =
+                            std::fs::read_to_string(path).expect("Failed to read the board file");
+                        let board = ThreeDBoard::load(&board_file);
+                        sim = ThreeDSimulator::new(board, a, b);
+                        current_sim_result = Ok(SimulationStepResult::Ok);
+                        state.history.clear();
+                        update_window_title(&rh, &thread, &sim, current_sim_result, Some(path));
+                    }
+                }
+                KeyboardKey::KEY_N if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
+                    sim = ThreeDSimulator::new(ThreeDBoard::default(), a, b);
                     current_sim_result = Ok(SimulationStepResult::Ok);
                     state.history.clear();
-                    update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
+                    filepath = None;
+                    update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
                 }
                 KeyboardKey::KEY_S if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
-                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) {
+                    if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) || filepath.is_none() {
                         let cwd = std::env::current_dir().expect("Failed to get current directory");
                         if let Some(path) = rfd::FileDialog::new()
                             .set_directory(cwd)
                             .set_title("Save board")
                             .save_file()
                         {
-                            filepath = path;
+                            filepath = Some(path);
                             let board = sim.as_board().save();
-                            std::fs::write(&filepath, board).expect("Failed to write to file");
+                            std::fs::write(filepath.as_ref().unwrap(), board)
+                                .expect("Failed to write to file");
                         }
                     } else {
                         let board = sim.as_board().save();
-                        std::fs::write(&filepath, board).expect("Failed to write to file");
+                        std::fs::write(filepath.as_ref().unwrap(), board)
+                            .expect("Failed to write to file");
                     }
                 }
                 KeyboardKey::KEY_C => {
@@ -322,7 +347,7 @@ Misc:
                                         &thread,
                                         &sim,
                                         current_sim_result,
-                                        &filepath,
+                                        filepath.as_ref(),
                                     );
                                 }
                                 Some(Cell::InputB) => {
@@ -332,7 +357,7 @@ Misc:
                                         &thread,
                                         &sim,
                                         current_sim_result,
-                                        &filepath,
+                                        filepath.as_ref(),
                                     );
                                 }
                                 _ => sim.set_cell(state.selected_pos, Cell::Data(v)),
@@ -499,13 +524,17 @@ fn update_window_title(
     thread: &RaylibThread,
     sim: &ThreeDSimulator,
     current_sim_result: Result<SimulationStepResult, Vector2D>,
-    path: &Path,
+    path: Option<&PathBuf>,
 ) {
     rh.set_window_title(
         thread,
         &format!(
             "[{}] a={} b={} t={} step={} score={} result={}",
-            path.file_name().unwrap().to_string_lossy(),
+            if let Some(path) = path {
+                path.file_name().unwrap().to_string_lossy().into_owned()
+            } else {
+                "untitled".to_string()
+            },
             sim.a(),
             sim.b(),
             sim.time(),

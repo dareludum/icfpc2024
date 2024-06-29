@@ -27,7 +27,7 @@ pub struct ThreeDCommand {
 impl ThreeDCommand {
     pub fn run(&self) {
         if self.interactive {
-            return gui_main(PathBuf::from(&self.program_path), self.a, self.b);
+            return gui_main(Some(PathBuf::from(&self.program_path)), self.a, self.b);
         }
 
         let board_file =
