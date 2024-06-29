@@ -68,7 +68,39 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
         {
             let mut d = rh.begin_drawing(&thread);
             d.clear_background(colors::SOLARIZED_BASE03);
-            render_sim(&mut d, &state, &sim);
+            if d.is_key_down(KeyboardKey::KEY_SLASH)
+                && (d.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
+                    || d.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT))
+            {
+                const HELP_TEXT: &str = r#"Controls:
+Arrow keys: move the selection
+Enter: toggle edit mode
+ - In edit mode, type a number and press Enter to set the selected cell to that number
+ - If over A or B inputs, will set the input value instead
+ - Only numbers, minus sign and backspace are allowed
+Delete: remove the selected cell
+< > ^ v: set the selected cell to move left/right/up/down
++ - * / %: set the selected cell to add/subtract/multiply/divide/modulo
+= #: set the selected cell to equal/not equal
+@: set the selected cell to time warp
+S: set the selected cell to submit
+A B: set the selected cell to input A or B
+Mouse actions:
+ - Left button: select a cell
+ - Right button: drag the viewport
+File management:
+ - Ctrl+O: open a board
+ - Ctrl+S: save the board
+ - Ctrl+Shift+S: save the board as
+Simulation:
+ - Q: step back
+ - E: step forward
+"#;
+
+                d.draw_text(HELP_TEXT, 10, 10, 18, colors::SOLARIZED_BASE0);
+            } else {
+                render_sim(&mut d, &state, &sim);
+            }
         }
 
         let mouse_pos = rh.get_mouse_position();
@@ -151,12 +183,12 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
         let need_to_sleep = true;
         if let Some(key) = rh.get_key_pressed() {
             match key {
-                KeyboardKey::KEY_A => {
+                KeyboardKey::KEY_Q => {
                     sim.step_back();
                     current_sim_result = Ok(None);
                     update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                 }
-                KeyboardKey::KEY_D => {
+                KeyboardKey::KEY_E => {
                     current_sim_result = sim.step();
                     update_window_title(&rh, &thread, &sim, current_sim_result, &filepath);
                 }
@@ -311,6 +343,14 @@ pub fn gui_main(mut filepath: PathBuf, a: i64, b: i64) {
                 // S
                 KeyboardKey::KEY_S => {
                     sim.set_cell(state.selected_pos, Cell::Submit);
+                }
+                // A
+                KeyboardKey::KEY_A => {
+                    sim.set_cell(state.selected_pos, Cell::InputA);
+                }
+                // B
+                KeyboardKey::KEY_B => {
+                    sim.set_cell(state.selected_pos, Cell::InputB);
                 }
                 // Numbers
                 KeyboardKey::KEY_ZERO if state.edit_mode => {
