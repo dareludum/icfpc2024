@@ -87,6 +87,10 @@ impl ThreeDSimulator {
             * self.all_time_max_t
     }
 
+    pub fn cells(&self) -> &HashMap<Vector2D, Cell> {
+        &self.current_cells
+    }
+
     pub fn step(&mut self) -> Result<Option<i64>, Vector2D> {
         enum Action {
             Erase(Vector2D),
@@ -380,5 +384,12 @@ impl ThreeDSimulator {
         }
 
         ThreeDBoard { board }
+    }
+
+    pub fn step_back(&mut self) {
+        if self.current_time > 1 {
+            self.current_time -= 1;
+            self.current_cells = self.history.pop().unwrap();
+        }
     }
 }
