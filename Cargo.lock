@@ -752,6 +752,7 @@ dependencies = [
  "display_tree",
  "dyn-clone",
  "logos",
+ "nom",
  "once_cell",
  "oxhttp",
  "petgraph",

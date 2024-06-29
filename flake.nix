@@ -43,9 +43,16 @@
           devShells.default = mkShell {
             buildInputs = [
               rustChan
-              pkgs.pkg-config
-              pkgs.openssl
+
+              cmake
+              mesa libGLU glfw
+              xorg.libX11 xorg.libXi xorg.libXcursor xorg.libXext xorg.libXrandr xorg.libXinerama
+              wayland.dev
+              libpulseaudio
+              pkg-config
+              openssl
             ];
+            LIBCLANG_PATH = "${lib.getLib llvmPackages.libclang}/lib";
           };
         }
     );

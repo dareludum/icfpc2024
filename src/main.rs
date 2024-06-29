@@ -1,6 +1,7 @@
 use std::io::{stdin, Read, Write};
 
 use icfp::parse;
+use icfp::serialize_str;
 use icfp::Token;
 use icfp::Value;
 use logos::Logos;
@@ -14,6 +15,7 @@ mod icfp;
 #[allow(clippy::all)]
 mod lambdaman;
 mod lambdaman_alt;
+mod lasm;
 mod runner;
 mod spaceship;
 mod three_d;
@@ -32,6 +34,7 @@ struct CliArgs {
 enum CliSubcommands {
     Eval(EvalCommand),
     Comm(CommCommand),
+    Compile(CompileCommand),
     Solve(runner::SolveCommand),
     ThreeD(three_d::ThreeDCommand),
 }
@@ -59,6 +62,19 @@ struct EvalCommand {
     #[argh(switch, short = 'r')]
     /// print raw token values (no newline, no quotes, etc.)
     raw: bool,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Compile a lambdasm program
+#[argh(subcommand, name = "compile")]
+struct CompileCommand {
+    #[argh(positional)]
+    /// the program in a file
+    program: Option<String>,
+
+    #[argh(option, short = 'o')]
+    /// a file to write the output to
+    output: Option<String>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -134,6 +150,40 @@ fn main() -> std::io::Result<()> {
                     std::io::stdout().flush().unwrap();
                 }
             }
+        }
+        CliSubcommands::Compile(CompileCommand { program, output }) => {
+            // read the program input
+            let program = if let Some(program) = program {
+                std::fs::read_to_string(program)?
+            } else {
+                let mut program = String::new();
+                stdin().lock().read_to_string(&mut program)?;
+                program
+            };
+
+            // setup the output file, if any
+            let outstream: &mut dyn std::io::Write = if let Some(output) = output {
+                &mut std::fs::File::create(output)?
+            } else {
+                &mut std::io::stdout().lock()
+            };
+
+            // parse the program
+            let program = match lasm::parse(&program) {
+                Ok(res) => res,
+                Err(err) => {
+                    eprintln!(
+                        "Parsing failed:\n{}",
+                        nom::error::convert_error(program.as_str(), err)
+                    );
+                    std::process::exit(1);
+                }
+            };
+
+            // compile and write the result
+            let res = lasm::compile(program);
+            let bin = serialize_str(res);
+            writeln!(outstream, "{bin}")?;
         }
         CliSubcommands::Solve(cmd) => cmd.run(),
         CliSubcommands::ThreeD(cmd) => cmd.run(),
