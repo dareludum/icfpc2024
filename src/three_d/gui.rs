@@ -1,4 +1,4 @@
-use std::{path::PathBuf, thread, time};
+use std::{collections::HashMap, path::PathBuf, thread, time};
 
 use crate::{
     geometry::Vector2D,
@@ -9,12 +9,17 @@ use super::{board::ThreeDBoard, sim::Cell};
 
 use raylib::prelude::*;
 
+const CELL_SIZE: i32 = 30;
+
 #[derive(Debug, Default)]
 struct GuiState {
     width: i32,
     height: i32,
     viewport_offset: Vector2D,
     viewport_drag_point: Option<Vector2>,
+    mouse_pos: Vector2,
+    drag_start: Option<Vector2>,
+    drag_group: Option<Vec<Vector2D>>,
     selected_pos: Vector2D,
     selection_rect: Option<(Vector2, Vector2)>,
     selection_group: Option<Vec<Vector2D>>,
@@ -28,12 +33,12 @@ impl GuiState {
         let mut x = pos.x as i32 - self.viewport_offset.x;
         let mut y = pos.y as i32 - self.viewport_offset.y;
         if x < 0 {
-            x -= 30;
+            x -= CELL_SIZE;
         }
         if y < 0 {
-            y -= 30;
+            y -= CELL_SIZE;
         }
-        Vector2D::new(x / 30, y / 30)
+        Vector2D::new(x / CELL_SIZE, y / CELL_SIZE)
     }
 }
 
@@ -119,6 +124,9 @@ Mouse actions:
   Left button: select a cell
   Left button + Shift: select multiple cells
   Right button: drag the viewport
+  Drag with left button: move selected cells
+  Shift + drag with left button: copy selected cells
+  Drag with right button: move the viewport
 
 File management:
   Ctrl+N: new board
@@ -147,8 +155,22 @@ Misc:
         }
 
         let mouse_pos = rh.get_mouse_position();
+        state.mouse_pos = mouse_pos;
         if state.selection_rect.is_some() {
             state.selection_rect = Some((state.selection_rect.unwrap().0, mouse_pos));
+        }
+
+        if rh.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
+            if let Some(start) = state.drag_start {
+                if (mouse_pos - start).length() > 5.0 {
+                    state.drag_group = Some(
+                        state
+                            .selection_group
+                            .clone()
+                            .unwrap_or_else(|| vec![state.selected_pos]),
+                    );
+                }
+            }
         }
 
         if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
@@ -160,13 +182,37 @@ Misc:
             }
             if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) {
                 state.selection_rect = Some((mouse_pos, mouse_pos));
+            } else if sim.cells().contains_key(&state.selected_pos) {
+                state.drag_start = Some(mouse_pos);
             }
         } else if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
             state.viewport_drag_point = Some(mouse_pos);
         }
 
         if rh.is_mouse_button_released(MouseButton::MOUSE_BUTTON_LEFT) {
-            if let Some((start, end)) = state.selection_rect.take() {
+            if let Some(group) = state.drag_group.take() {
+                let drag_start_pos = state.screen_to_sim_coords(state.drag_start.unwrap());
+                let mut cells = HashMap::new();
+                if !rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) {
+                    for pos in &group {
+                        cells.insert(*pos, sim.remove_cell(*pos).unwrap());
+                    }
+                }
+                let mut new_selection_group = vec![];
+                for pos in &group {
+                    let new_pos =
+                        state.screen_to_sim_coords(state.mouse_pos) - drag_start_pos + *pos;
+                    let cell = cells
+                        .remove(pos)
+                        .unwrap_or_else(|| *sim.cells().get(pos).unwrap());
+                    sim.set_cell(new_pos, cell);
+                    new_selection_group.push(new_pos);
+                    if state.selected_pos == *pos {
+                        state.selected_pos = new_pos;
+                    }
+                }
+                state.selection_group = Some(new_selection_group);
+            } else if let Some((start, end)) = state.selection_rect.take() {
                 let start = state.screen_to_sim_coords(start);
                 let end = state.screen_to_sim_coords(end);
                 let mut selected_cells = Vec::new();
@@ -180,6 +226,7 @@ Misc:
                 }
                 state.selection_group = Some(selected_cells);
             }
+            state.drag_start = None;
         } else if rh.is_mouse_button_released(MouseButton::MOUSE_BUTTON_RIGHT) {
             state.viewport_drag_point = None;
         }
@@ -558,161 +605,11 @@ fn update_window_title(
 }
 
 fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator) {
-    const CELL_SIZE: i32 = 30;
-
     for (pos, cell) in sim.cells() {
-        d.draw_rectangle(
-            state.viewport_offset.x + pos.x * CELL_SIZE,
-            state.viewport_offset.y + pos.y * CELL_SIZE,
-            CELL_SIZE,
-            CELL_SIZE,
-            colors::SOLARIZED_BASE02,
-        );
-        match cell {
-            Cell::Data(v) => {
-                d.draw_text(
-                    &format!("{}", v),
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    13,
-                    colors::SOLARIZED_BASE0,
-                );
-            }
-            Cell::MoveLeft => {
-                d.draw_text(
-                    "<",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_ORANGE,
-                );
-            }
-            Cell::MoveRight => {
-                d.draw_text(
-                    ">",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_ORANGE,
-                );
-            }
-            Cell::MoveUp => {
-                d.draw_text(
-                    "^",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_ORANGE,
-                );
-            }
-            Cell::MoveDown => {
-                d.draw_text(
-                    "v",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_ORANGE,
-                );
-            }
-            Cell::Add => {
-                d.draw_text(
-                    "+",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_VIOLET,
-                );
-            }
-            Cell::Subtract => {
-                d.draw_text(
-                    "-",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_VIOLET,
-                );
-            }
-            Cell::Multiply => {
-                d.draw_text(
-                    "*",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_VIOLET,
-                );
-            }
-            Cell::Divide => {
-                d.draw_text(
-                    "/",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_VIOLET,
-                );
-            }
-            Cell::Modulo => {
-                d.draw_text(
-                    "%",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_VIOLET,
-                );
-            }
-            Cell::Equal => {
-                d.draw_text(
-                    "=",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_RED,
-                );
-            }
-            Cell::NotEqual => {
-                d.draw_text(
-                    "#",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_RED,
-                );
-            }
-            Cell::TimeWarp => {
-                d.draw_text(
-                    "@",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_CYAN,
-                );
-            }
-            Cell::Submit => {
-                d.draw_text(
-                    "S",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_BLUE,
-                );
-            }
-            Cell::InputA => {
-                d.draw_text(
-                    "A",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_GREEN,
-                );
-            }
-            Cell::InputB => {
-                d.draw_text(
-                    "B",
-                    state.viewport_offset.x + pos.x * CELL_SIZE + 5,
-                    state.viewport_offset.y + pos.y * CELL_SIZE + 5,
-                    25,
-                    colors::SOLARIZED_GREEN,
-                );
-            }
+        if state.drag_group.as_ref().map_or(true, |g| !g.contains(pos))
+            || d.is_key_down(KeyboardKey::KEY_LEFT_CONTROL)
+        {
+            draw_cell(d, state, pos, cell, Vector2::zero());
         }
     }
 
@@ -772,5 +669,95 @@ fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator)
             (max_y - min_y) as i32,
             colors::SOLARIZED_BASE01,
         );
+    }
+
+    if let Some(group) = state.drag_group.as_ref() {
+        let drag_offset = state.mouse_pos - state.drag_start.unwrap();
+        let drag_start_pos = state.screen_to_sim_coords(state.drag_start.unwrap());
+        for pos in group {
+            let new_pos = state.screen_to_sim_coords(state.mouse_pos) - drag_start_pos + *pos;
+            d.draw_rectangle(
+                state.viewport_offset.x + new_pos.x * CELL_SIZE,
+                state.viewport_offset.y + new_pos.y * CELL_SIZE,
+                CELL_SIZE,
+                CELL_SIZE,
+                colors::SOLARIZED_BASE02,
+            );
+        }
+        for pos in group {
+            if let Some(cell) = sim.cells().get(pos) {
+                draw_cell(d, state, pos, cell, drag_offset);
+            }
+            d.draw_rectangle_lines(
+                state.viewport_offset.x + (drag_offset.x as i32) + pos.x * CELL_SIZE,
+                state.viewport_offset.y + (drag_offset.y as i32) + pos.y * CELL_SIZE + 1,
+                CELL_SIZE - 1,
+                CELL_SIZE - 1,
+                colors::SOLARIZED_BASE01,
+            );
+        }
+    }
+}
+
+fn draw_cell(
+    d: &mut RaylibDrawHandle,
+    state: &GuiState,
+    pos: &Vector2D,
+    cell: &Cell,
+    offset: Vector2,
+) {
+    let x = state.viewport_offset.x + pos.x * CELL_SIZE + (offset.x as i32);
+    let y = state.viewport_offset.y + pos.y * CELL_SIZE + (offset.y as i32);
+
+    d.draw_rectangle(x, y, CELL_SIZE, CELL_SIZE, colors::SOLARIZED_BASE02);
+    match cell {
+        Cell::Data(v) => {
+            d.draw_text(&format!("{}", v), x + 5, y + 5, 13, colors::SOLARIZED_BASE0);
+        }
+        Cell::MoveLeft => {
+            d.draw_text("<", x + 5, y + 5, 25, colors::SOLARIZED_ORANGE);
+        }
+        Cell::MoveRight => {
+            d.draw_text(">", x + 5, y + 5, 25, colors::SOLARIZED_ORANGE);
+        }
+        Cell::MoveUp => {
+            d.draw_text("^", x + 5, y + 5, 25, colors::SOLARIZED_ORANGE);
+        }
+        Cell::MoveDown => {
+            d.draw_text("v", x + 5, y + 5, 25, colors::SOLARIZED_ORANGE);
+        }
+        Cell::Add => {
+            d.draw_text("+", x + 5, y + 5, 25, colors::SOLARIZED_VIOLET);
+        }
+        Cell::Subtract => {
+            d.draw_text("-", x + 5, y + 5, 25, colors::SOLARIZED_VIOLET);
+        }
+        Cell::Multiply => {
+            d.draw_text("*", x + 5, y + 5, 25, colors::SOLARIZED_VIOLET);
+        }
+        Cell::Divide => {
+            d.draw_text("/", x + 5, y + 5, 25, colors::SOLARIZED_VIOLET);
+        }
+        Cell::Modulo => {
+            d.draw_text("%", x + 5, y + 5, 25, colors::SOLARIZED_VIOLET);
+        }
+        Cell::Equal => {
+            d.draw_text("=", x + 5, y + 5, 25, colors::SOLARIZED_RED);
+        }
+        Cell::NotEqual => {
+            d.draw_text("#", x + 5, y + 5, 25, colors::SOLARIZED_RED);
+        }
+        Cell::TimeWarp => {
+            d.draw_text("@", x + 5, y + 5, 25, colors::SOLARIZED_CYAN);
+        }
+        Cell::Submit => {
+            d.draw_text("S", x + 5, y + 5, 25, colors::SOLARIZED_BLUE);
+        }
+        Cell::InputA => {
+            d.draw_text("A", x + 5, y + 5, 25, colors::SOLARIZED_GREEN);
+        }
+        Cell::InputB => {
+            d.draw_text("B", x + 5, y + 5, 25, colors::SOLARIZED_GREEN);
+        }
     }
 }

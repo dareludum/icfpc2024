@@ -475,8 +475,8 @@ impl ThreeDSimulator {
         }
     }
 
-    pub fn remove_cell(&mut self, pos: Vector2D) {
-        self.current_cells.remove(&pos);
+    pub fn remove_cell(&mut self, pos: Vector2D) -> Option<Cell> {
+        self.current_cells.remove(&pos)
     }
 
     pub fn set_cell(&mut self, pos: Vector2D, cell: Cell) {
