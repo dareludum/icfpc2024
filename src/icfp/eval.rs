@@ -454,6 +454,7 @@ fn str(v: String) -> NodeRef {
 #[cfg(test)]
 mod tests {
     use logos::Logos;
+    use memoize::memoize;
 
     use crate::icfp::ast::EvalStrat;
 
@@ -647,5 +648,40 @@ mod tests {
             value = value * 4;
         }
         println!("{}", value);
+    }
+
+    #[test]
+    fn efficiency4() {
+        // │   └── Lambda
+        // │       ├── VarId(3)
+        // │       └── Lambda
+        // │           ├── VarId(4)
+        // │           └── If
+        // │               ├── cond: IntLt
+        // │               │   ├── VarId(4)
+        // │               │   └── 2
+        // │               ├── then_do: 1
+        // │               └── else_do: IntAdd
+        // │                   ├── Name
+        // │                   │   ├── VarId(3)
+        // │                   │   └── IntSub
+        // │                   │       ├── VarId(4)
+        // │                   │       └── 1
+        // │                   └── Name
+        // │                       ├── VarId(3)
+        // │                       └── IntSub
+        // │                           ├── VarId(4)
+        // │                           └── 2
+        // └── 40
+        println!("{}", efficiency4_func(40.into()));
+    }
+
+    #[memoize]
+    fn efficiency4_func(v: Base94Int) -> Base94Int {
+        if v < 2.into() {
+            1.into()
+        } else {
+            efficiency4_func(v.clone() - 1) + efficiency4_func(v - 2)
+        }
     }
 }
