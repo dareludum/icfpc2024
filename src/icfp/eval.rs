@@ -639,4 +639,13 @@ mod tests {
         const TASK: &str = "B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I! Su B. B$ v\" B/ v# IH BT I\" BD B% v# IH Su4qVj}8^WX\\U[]ZY9w~f%-0\"/!2$gH.375)lP,n I(t'T]i`L\\q}xfv-+AbPWONl[f;FyoN|Sjm%ifIR!%r:L1/h4KYz~x@v}PFUj2npub/DuW6c16@K3(*qvWF";
         eval(TASK);
     }
+
+    #[test]
+    fn efficiency1() {
+        let mut value: Base94Int = 1.into();
+        for _ in 0..22 {
+            value = value * 4;
+        }
+        println!("{}", value);
+    }
 }
