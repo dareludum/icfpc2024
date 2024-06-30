@@ -507,4 +507,16 @@ impl ThreeDSimulator {
     pub fn set_cell(&mut self, pos: Vector2D, cell: Cell) {
         self.current_cells.insert(pos, cell);
     }
+
+    pub fn time_warp_target(&self, pos: Vector2D) -> Option<Vector2D> {
+        if let Some(Cell::TimeWarp) = self.current_cells.get(&pos) {
+            if let (Some(Cell::Data(dx)), Some(Cell::Data(dy))) = (
+                self.current_cells.get(&pos.left()),
+                self.current_cells.get(&pos.right()),
+            ) {
+                return Some(pos - Vector2D::new(*dx as i32, *dy as i32));
+            }
+        }
+        None
+    }
 }

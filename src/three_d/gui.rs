@@ -667,6 +667,15 @@ fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator)
                 colors::SOLARIZED_RED,
             );
         }
+        if let Some(target) = sim.time_warp_target(state.selected_pos) {
+            d.draw_rectangle_lines(
+                state.viewport_offset.x + target.x * CELL_SIZE,
+                state.viewport_offset.y + target.y * CELL_SIZE + 1,
+                CELL_SIZE - 1,
+                CELL_SIZE - 1,
+                colors::SOLARIZED_CYAN,
+            );
+        }
     }
 
     let start_x = state.viewport_offset.x % CELL_SIZE;
