@@ -1,0 +1,8 @@
+let line_size = 199;
+    rec strmul x i n =
+    if i < n {
+        x . (strmul x (i + 1) n)
+    } else {
+        x
+    };
+in "solve lambdaman6 " . (strmul "R" 1 line_size)

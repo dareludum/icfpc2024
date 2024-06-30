@@ -89,6 +89,9 @@ struct CommCommand {
     #[argh(switch, short = 'r')]
     /// whether to print the raw response or try to parse it
     raw_response: bool,
+    #[argh(option, short = 'f')]
+    /// submit a file
+    file: Option<String>,
 }
 
 fn main() -> std::io::Result<()> {
@@ -141,14 +144,23 @@ fn main() -> std::io::Result<()> {
             }
         }
         CliSubcommands::Comm(cmd) => {
-            if let Some(message) = cmd.message {
-                send_receive_single_command(message, cmd.raw_response, false);
+            if let Some(file) = cmd.file {
+                let message = std::fs::read_to_string(file)?;
+                send_receive_single_command(
+                    message.trim_end().to_owned(),
+                    true,
+                    cmd.raw_response,
+                    false,
+                );
+                return Ok(());
+            } else if let Some(message) = cmd.message {
+                send_receive_single_command(message, false, cmd.raw_response, false);
             } else {
                 loop {
                     print!("icfp> ");
                     std::io::stdout().flush().unwrap();
                     let message: String = read!("{}\n");
-                    send_receive_single_command(message, cmd.raw_response, true);
+                    send_receive_single_command(message, false, cmd.raw_response, true);
                     std::io::stdout().flush().unwrap();
                 }
             }
@@ -193,8 +205,17 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn send_receive_single_command(command: String, print_raw_response: bool, add_newline: bool) {
-    match comms::send_string(command) {
+fn send_receive_single_command(
+    command: String,
+    encoded: bool,
+    print_raw_response: bool,
+    add_newline: bool,
+) {
+    match if encoded {
+        comms::send_encoded(command)
+    } else {
+        comms::send_string(command)
+    } {
         Some(response) => {
             print_response(response, print_raw_response, add_newline);
         }

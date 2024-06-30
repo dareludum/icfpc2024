@@ -10,6 +10,9 @@ pub use parser::parse;
 mod tests {
     use std::rc::Rc;
 
+    use num::BigInt;
+    use num::FromPrimitive;
+
     use super::compile;
     use super::parse;
     use crate::icfp::evaluate;
@@ -28,6 +31,44 @@ mod tests {
         let node = parse(sample).unwrap();
         let node = compile(node);
         assert_eq!(evaluate(node).as_int(), &10.into());
+    }
+
+    #[test]
+    fn test_take() {
+        let sample = r#"
+            "ab" take 1
+        "#;
+        let node = parse(sample).unwrap();
+        let node = compile(node);
+        println!("{:#?}", evaluate(node));
+        // assert_eq!(evaluate(node).as_str(), "a");
+    }
+
+    #[test]
+    fn test_concat() {
+        let sample = r#"
+            let a = "a"; in
+            a . "b"
+        "#;
+        let node = parse(sample).unwrap();
+        let node = compile(node);
+        println!("{:#?}", evaluate(node));
+        // assert_eq!(evaluate(node).as_str(), "a");
+    }
+
+
+    #[test]
+    fn test_equals() {
+        let sample = r#"
+            if 1 == 2 {
+                3
+            } else {
+                4
+            }
+        "#;
+        let node = parse(sample).unwrap();
+        let node = compile(node);
+        assert_eq!(evaluate(node).as_int(), &BigInt::from_u8(4).unwrap());
     }
 
     #[test]
