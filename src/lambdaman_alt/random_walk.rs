@@ -30,7 +30,7 @@ impl Solver for RandomWalk {
         let mut solution: Option<(u64, usize)> = None;
 
         'attempts: for attempt_i in 0..1000 {
-            let seed: u64 = rand::random();
+            let seed: u64 = rand::random::<u32>() as u64;
             let mut rng_state = seed;
             let mut model = self.model.clone();
             for iter in 0..1_000_000 {
