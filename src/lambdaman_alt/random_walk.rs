@@ -65,7 +65,10 @@ impl Solver for RandomWalk {
 
         let Some((good_seed, attempt_count)) = solution else {
             let best_attempt = best_attempt.unwrap();
-            eprintln!("no solution found. best board has {} remaining items:", best_attempt.fruit_count);
+            eprintln!(
+                "no solution found. best board has {} remaining items:",
+                best_attempt.fruit_count
+            );
             best_attempt.print();
             std::process::exit(1);
         };

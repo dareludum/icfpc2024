@@ -99,13 +99,16 @@ impl LambdamanModel {
             for (x, cell) in line.iter().enumerate() {
                 if x == self.player_pos.x as usize && y == self.player_pos.y as usize {
                     eprint!("L");
-                    continue
+                    continue;
                 }
-                eprint!("{}", match cell {
-                    Cell::Wall => '#',
-                    Cell::Fruit => '.',
-                    Cell::Empty => ' ',
-                });
+                eprint!(
+                    "{}",
+                    match cell {
+                        Cell::Wall => '#',
+                        Cell::Fruit => '.',
+                        Cell::Empty => ' ',
+                    }
+                );
             }
             eprintln!();
         }
