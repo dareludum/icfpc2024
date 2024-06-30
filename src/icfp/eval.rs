@@ -150,7 +150,7 @@ impl Evaluator {
                             str(r
                                 .as_str()
                                 .chars()
-                                .take(l.as_int().iter_u64_digits().next().unwrap() as usize)
+                                .take(l.as_int().iter_u64_digits().next().unwrap_or(0) as usize)
                                 .collect()),
                             true,
                         ),
@@ -158,7 +158,9 @@ impl Evaluator {
                             str(r
                                 .as_str()
                                 .chars()
-                                .skip(l.as_int().iter_u64_digits().next().unwrap() as usize)
+                                .skip(
+                                    l.as_int().iter_u64_digits().next().unwrap_or(0) as usize
+                                )
                                 .collect()),
                             true,
                         ),

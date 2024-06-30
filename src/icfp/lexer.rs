@@ -115,7 +115,7 @@ fn u94_integer(lex: &mut Lexer<Token>) -> Option<Base94UInt> {
 }
 
 fn u64_integer(lex: &mut Lexer<Token>) -> u64 {
-    u94_integer(lex).unwrap().iter_u64_digits().next().unwrap()
+    u94_integer(lex).unwrap().iter_u64_digits().next().unwrap_or(0)
 }
 
 fn string(lex: &mut Lexer<Token>) -> String {
