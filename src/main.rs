@@ -9,12 +9,13 @@ use logos::Logos;
 use text_io::read;
 
 mod comms;
+#[allow(clippy::all)]
+mod compression;
 mod geometry;
 mod icfp;
 // TODO: Remove when fixed
 #[allow(dead_code)]
 #[allow(clippy::all)]
-mod compression;
 mod lambdaman;
 mod lambdaman_alt;
 mod lasm;
@@ -90,8 +91,11 @@ struct CommCommand {
     /// whether to print the raw response or try to parse it
     raw_response: bool,
     #[argh(option, short = 'f')]
-    /// submit a file
-    file: Option<String>,
+    /// submit a raw ICFP file
+    raw_file: Option<String>,
+    #[argh(option, short = 't')]
+    /// submit a text file (encoded as ICFP code)
+    text_file: Option<String>,
 }
 
 fn main() -> std::io::Result<()> {
@@ -144,14 +148,18 @@ fn main() -> std::io::Result<()> {
             }
         }
         CliSubcommands::Comm(cmd) => {
-            if let Some(file) = cmd.file {
-                let message = std::fs::read_to_string(file)?;
+            if let Some(raw_file) = cmd.raw_file {
+                let message = std::fs::read_to_string(raw_file)?;
                 send_receive_single_command(
                     message.trim_end().to_owned(),
                     true,
                     cmd.raw_response,
                     false,
                 );
+                return Ok(());
+            } else if let Some(text_file) = cmd.text_file {
+                let message = std::fs::read_to_string(text_file)?;
+                send_receive_single_command(message, false, cmd.raw_response, false);
                 return Ok(());
             } else if let Some(message) = cmd.message {
                 send_receive_single_command(message, false, cmd.raw_response, false);
