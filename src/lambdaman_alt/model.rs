@@ -7,6 +7,7 @@ pub struct LambdamanModel {
     pub map: Vec<Vec<Cell>>,
     pub player_pos: Vector2D,
     pub fruit_count: usize,
+    pub move_count: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,6 +60,7 @@ impl LambdamanModel {
             map,
             player_pos,
             fruit_count,
+            move_count: 0,
         }
     }
 
@@ -75,6 +77,7 @@ impl LambdamanModel {
     }
 
     pub fn apply(&mut self, mov: Move) {
+        self.move_count += 1;
         let new_pos = self.player_pos.apply(mov);
 
         // if the move is oob, ignore it
