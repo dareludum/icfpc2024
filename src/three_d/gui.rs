@@ -16,9 +16,25 @@ struct GuiState {
     viewport_offset: Vector2D,
     viewport_drag_point: Option<Vector2>,
     selected_pos: Vector2D,
+    selection_rect: Option<(Vector2, Vector2)>,
+    selection_group: Option<Vec<Vector2D>>,
     edit_mode: bool,
     edited_value: String,
     history: Vec<ThreeDSimulator>,
+}
+
+impl GuiState {
+    fn screen_to_sim_coords(&self, pos: Vector2) -> Vector2D {
+        let mut x = pos.x as i32 - self.viewport_offset.x;
+        let mut y = pos.y as i32 - self.viewport_offset.y;
+        if x < 0 {
+            x -= 30;
+        }
+        if y < 0 {
+            y -= 30;
+        }
+        Vector2D::new(x / 30, y / 30)
+    }
 }
 
 #[allow(dead_code)]
@@ -101,6 +117,7 @@ Enter: toggle edit mode
 
 Mouse actions:
   Left button: select a cell
+  Left button + Shift: select multiple cells
   Right button: drag the viewport
 
 File management:
@@ -130,71 +147,39 @@ Misc:
         }
 
         let mouse_pos = rh.get_mouse_position();
+        if state.selection_rect.is_some() {
+            state.selection_rect = Some((state.selection_rect.unwrap().0, mouse_pos));
+        }
 
         if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
-            // TODO: cell size
-            let mut x = mouse_pos.x as i32 - state.viewport_offset.x;
-            let mut y = mouse_pos.y as i32 - state.viewport_offset.y;
-            if x < 0 {
-                x -= 30;
+            state.selected_pos = state.screen_to_sim_coords(mouse_pos);
+            if let Some(group) = state.selection_group.as_ref() {
+                if !group.contains(&state.selected_pos) {
+                    state.selection_group = None;
+                }
             }
-            if y < 0 {
-                y -= 30;
+            if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) {
+                state.selection_rect = Some((mouse_pos, mouse_pos));
             }
-            state.selected_pos = Vector2D::new(x / 30, y / 30);
         } else if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
             state.viewport_drag_point = Some(mouse_pos);
-        } else {
-            // if mouse_pos.x < (rh.get_screen_width() as f32 - 50.0) {
-            //     let scroll = rh.get_mouse_wheel_move();
-            //     let scroll_amount = 0.95;
-            //     if scroll.abs() > 0.5 {
-            //         if scroll > 0.0 {
-            //             let offset = 2.0 * state.translator.step / scroll_amount;
-            //             state.translator.x_offset -= offset;
-            //             state.translator.y_offset -= offset;
-            //             state.translator.step /= scroll_amount;
-            //         } else {
-            //             let offset = 2.0 * state.translator.step * scroll_amount;
-            //             state.translator.x_offset += offset;
-            //             state.translator.y_offset += offset;
-            //             state.translator.step *= scroll_amount;
-            //         }
-            //     }
-            // }
         }
 
         if rh.is_mouse_button_released(MouseButton::MOUSE_BUTTON_LEFT) {
-            // state.dragged_point = None;
-            // state.rotate_pivot = None;
-            // state.rotate_vertices_copy.clear();
-            // if let Some(pos) = state.selection_pos {
-            //     let rect = vec2_to_rect(pos, mouse_pos);
-            //     let min = state.untranslate(&Vector2 {
-            //         x: rect.x,
-            //         y: rect.y,
-            //     });
-            //     let max = state.untranslate(&Vector2 {
-            //         x: rect.x + rect.width,
-            //         y: rect.y + rect.height,
-            //     });
-            //     let hits = hit_test_rect(&pose.borrow(), min, max);
-            //     if !rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
-            //         && !rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL)
-            //     {
-            //         state.selected_points.clear();
-            //     }
-            //     if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) {
-            //         for hit in hits {
-            //             state.selected_points.remove(&hit);
-            //         }
-            //     } else {
-            //         for hit in hits {
-            //             state.selected_points.insert(hit);
-            //         }
-            //     }
-            //     state.selection_pos = None;
-            // }
+            if let Some((start, end)) = state.selection_rect.take() {
+                let start = state.screen_to_sim_coords(start);
+                let end = state.screen_to_sim_coords(end);
+                let mut selected_cells = Vec::new();
+                for x in start.x.min(end.x)..=start.x.max(end.x) {
+                    for y in start.y.min(end.y)..=start.y.max(end.y) {
+                        let pos = Vector2D::new(x, y);
+                        if sim.cells().contains_key(&pos) {
+                            selected_cells.push(pos);
+                        }
+                    }
+                }
+                state.selection_group = Some(selected_cells);
+            }
         } else if rh.is_mouse_button_released(MouseButton::MOUSE_BUTTON_RIGHT) {
             state.viewport_drag_point = None;
         }
@@ -383,7 +368,13 @@ Misc:
                     }
                 }
                 KeyboardKey::KEY_DELETE => {
-                    sim.remove_cell(state.selected_pos);
+                    if let Some(group) = state.selection_group.take() {
+                        for pos in group {
+                            sim.remove_cell(pos);
+                        }
+                    } else {
+                        sim.remove_cell(state.selected_pos);
+                    }
                 }
                 // <
                 KeyboardKey::KEY_COMMA
@@ -725,6 +716,18 @@ fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator)
         }
     }
 
+    if let Some(selected_cells) = state.selection_group.as_ref() {
+        for pos in selected_cells {
+            d.draw_rectangle_lines(
+                state.viewport_offset.x + pos.x * CELL_SIZE,
+                state.viewport_offset.y + pos.y * CELL_SIZE + 1,
+                CELL_SIZE - 1,
+                CELL_SIZE - 1,
+                colors::SOLARIZED_BASE01,
+            );
+        }
+    }
+
     {
         d.draw_rectangle_lines(
             state.viewport_offset.x + state.selected_pos.x * CELL_SIZE,
@@ -734,7 +737,7 @@ fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator)
             if state.edit_mode {
                 colors::SOLARIZED_RED
             } else {
-                colors::SOLARIZED_BASE01
+                colors::SOLARIZED_BASE1
             },
         );
         if state.edit_mode {
@@ -755,5 +758,19 @@ fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator)
     }
     for y in (start_y..state.height).step_by(CELL_SIZE as usize) {
         d.draw_line(0, y, state.width, y, colors::SOLARIZED_BASE02);
+    }
+
+    if let Some((start, end)) = state.selection_rect {
+        let min_x = start.x.min(end.x);
+        let min_y = start.y.min(end.y);
+        let max_x = start.x.max(end.x);
+        let max_y = start.y.max(end.y);
+        d.draw_rectangle_lines(
+            min_x as i32,
+            min_y as i32,
+            (max_x - min_x) as i32,
+            (max_y - min_y) as i32,
+            colors::SOLARIZED_BASE01,
+        );
     }
 }
