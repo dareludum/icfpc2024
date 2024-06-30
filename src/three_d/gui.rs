@@ -152,6 +152,15 @@ Misc:
                 d.draw_text(HELP_TEXT, 10, 10, 18, colors::SOLARIZED_BASE0);
             } else {
                 render_sim(&mut d, &state, &sim);
+                if let SimulationStepResult::Error(pos) = current_sim_result {
+                    d.draw_rectangle_lines(
+                        state.viewport_offset.x + pos.x * CELL_SIZE,
+                        state.viewport_offset.y + pos.y * CELL_SIZE + 1,
+                        CELL_SIZE - 1,
+                        CELL_SIZE - 1,
+                        colors::SOLARIZED_RED,
+                    );
+                }
             }
         }
 
