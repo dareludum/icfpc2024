@@ -18,12 +18,13 @@ type LNodeResult<'a> = IResult<&'a str, LNodeRef, VerboseError<&'a str>>;
 fn identifier(input: &str) -> IResult<&str, Iden, VerboseError<&str>> {
     let (rest, rec) = context(
         "ident",
-        verify(recognize(pair(
-            alt((alpha1, tag("_"))),
-            many0_count(alt((alphanumeric1, tag("_")))),
-        )), |iden: &str| {
-            iden != "take" && iden != "drop"
-        }),
+        verify(
+            recognize(pair(
+                alt((alpha1, tag("_"))),
+                many0_count(alt((alphanumeric1, tag("_")))),
+            )),
+            |iden: &str| iden != "take" && iden != "drop",
+        ),
     )
     .parse(input)?;
     Ok((rest, Iden::new(rec.to_owned())))
@@ -193,11 +194,9 @@ fn infix_expr(input: &str) -> LNodeResult {
             callseq_expr,
         )),
         move || expr.clone(),
-        |left, ((op, order), right)| {
-            match order {
-                OperandOrder::Preserved => LNode::binary_op(op, left, right),
-                OperandOrder::Reversed => LNode::binary_op(op, right, left),
-            }
+        |left, ((op, order), right)| match order {
+            OperandOrder::Preserved => LNode::binary_op(op, left, right),
+            OperandOrder::Reversed => LNode::binary_op(op, right, left),
         },
     )(input)
 }

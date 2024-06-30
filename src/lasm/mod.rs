@@ -56,7 +56,6 @@ mod tests {
         // assert_eq!(evaluate(node).as_str(), "a");
     }
 
-
     #[test]
     fn test_equals() {
         let sample = r#"
