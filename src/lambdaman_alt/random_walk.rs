@@ -28,6 +28,7 @@ impl Solver for RandomWalk {
         const MODULO: u64 = 4294967296u64;
 
         let mut solution: Option<(u64, usize)> = None;
+        let mut best_attempt: Option<LambdamanModel> = None;
 
         'attempts: for attempt_i in 0..1000 {
             let seed: u64 = rand::random::<u32>() as u64;
@@ -52,9 +53,22 @@ impl Solver for RandomWalk {
                 }
                 rng_state = (FACTOR.wrapping_mul(rng_state) + ADD) % MODULO;
             }
+
+            if let Some(best_attempt) = best_attempt.as_mut() {
+                if model.fruit_count < best_attempt.fruit_count {
+                    *best_attempt = model;
+                }
+            } else {
+                best_attempt = Some(model);
+            }
         }
 
-        let (good_seed, attempt_count) = solution.expect("no solution found");
+        let Some((good_seed, attempt_count)) = solution else {
+            let best_attempt = best_attempt.unwrap();
+            eprintln!("no solution found. best board has {} remaining items:", best_attempt.fruit_count);
+            best_attempt.print();
+            std::process::exit(1);
+        };
 
         let problem_name = self.problem.name.as_str();
         let code = format!(

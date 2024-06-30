@@ -93,4 +93,21 @@ impl LambdamanModel {
         }
         self.player_pos = new_pos;
     }
+
+    pub fn print(&self) {
+        for (y, line) in self.map.iter().enumerate() {
+            for (x, cell) in line.iter().enumerate() {
+                if x == self.player_pos.x as usize && y == self.player_pos.y as usize {
+                    eprint!("L");
+                    continue
+                }
+                eprint!("{}", match cell {
+                    Cell::Wall => '#',
+                    Cell::Fruit => '.',
+                    Cell::Empty => ' ',
+                });
+            }
+            eprintln!();
+        }
+    }
 }
