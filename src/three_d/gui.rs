@@ -125,7 +125,7 @@ Mouse actions:
   Left button + Shift: select multiple cells
   Right button: drag the viewport
   Drag with left button: move selected cells
-  Shift + drag with left button: copy selected cells
+  Ctrl + drag with left button: copy selected cells
   Drag with right button: move the viewport
 
 File management:
