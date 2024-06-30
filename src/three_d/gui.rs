@@ -7,6 +7,7 @@ use crate::{
 
 use super::{board::ThreeDBoard, sim::Cell};
 
+use num::BigInt;
 use raylib::prelude::*;
 
 const CELL_SIZE: i32 = 30;
@@ -65,7 +66,7 @@ mod colors {
     pub static SOLARIZED_GREEN: Color = Color::new(0x85, 0x99, 0x00, 0xff);
 }
 
-pub fn gui_main(mut filepath: Option<PathBuf>, a: i64, b: i64) {
+pub fn gui_main(mut filepath: Option<PathBuf>, a: BigInt, b: BigInt) {
     const WINDOW_WIDTH: i32 = 1024;
     const WINDOW_HEIGHT: i32 = 768;
 
@@ -81,7 +82,7 @@ pub fn gui_main(mut filepath: Option<PathBuf>, a: i64, b: i64) {
         height: WINDOW_HEIGHT,
         ..Default::default()
     };
-    let mut sim = ThreeDSimulator::new(board, a, b);
+    let mut sim = ThreeDSimulator::new(board, a.clone(), b.clone());
 
     center_viewport(&sim, &mut state);
 
@@ -92,7 +93,7 @@ pub fn gui_main(mut filepath: Option<PathBuf>, a: i64, b: i64) {
 
     rh.set_exit_key(None);
 
-    update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
+    update_window_title(&rh, &thread, &sim, &current_sim_result, filepath.as_ref());
 
     while !rh.window_should_close() {
         {
@@ -189,8 +190,8 @@ Misc:
                     if *cell == Cell::TimeWarp {
                         let new_pos = state.screen_to_sim_coords(mouse_pos);
                         let diff = state.selected_pos - new_pos;
-                        sim.set_cell(state.selected_pos.left(), Cell::Data(diff.x as i64));
-                        sim.set_cell(state.selected_pos.right(), Cell::Data(diff.y as i64));
+                        sim.set_cell(state.selected_pos.left(), Cell::Data(diff.x.into()));
+                        sim.set_cell(state.selected_pos.right(), Cell::Data(diff.y.into()));
                     }
                 }
             } else {
@@ -225,7 +226,7 @@ Misc:
                         state.screen_to_sim_coords(state.mouse_pos) - drag_start_pos + *pos;
                     let cell = cells
                         .remove(pos)
-                        .unwrap_or_else(|| *sim.cells().get(pos).unwrap());
+                        .unwrap_or_else(|| sim.cells().get(pos).unwrap().clone());
                     sim.set_cell(new_pos, cell);
                     new_selection_group.push(new_pos);
                     if state.selected_pos == *pos {
@@ -269,7 +270,7 @@ Misc:
             let result = sim.step();
             if result != SimulationStepResult::AlreadyFinished {
                 current_sim_result = result;
-                update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
+                update_window_title(&rh, &thread, &sim, &current_sim_result, filepath.as_ref());
                 if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                     || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT)
                 {
@@ -293,19 +294,23 @@ Misc:
                         sim = prev_sim;
                         current_sim_result = SimulationStepResult::Ok;
                     }
-                    update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
+                    update_window_title(&rh, &thread, &sim, &current_sim_result, filepath.as_ref());
                 }
                 KeyboardKey::KEY_E => {
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
                         || rh.is_key_down(KeyboardKey::KEY_RIGHT_SHIFT)
                     {
-                        sim = ThreeDSimulator::new(sim.as_board().clone(), a, b);
+                        sim = ThreeDSimulator::new(
+                            sim.as_board().clone(),
+                            sim.a().clone(),
+                            sim.b().clone(),
+                        );
                         current_sim_result = SimulationStepResult::Ok;
                         update_window_title(
                             &rh,
                             &thread,
                             &sim,
-                            current_sim_result,
+                            &current_sim_result,
                             filepath.as_ref(),
                         );
                     } else {
@@ -321,7 +326,7 @@ Misc:
                                     &rh,
                                     &thread,
                                     &sim,
-                                    current_sim_result,
+                                    &current_sim_result,
                                     filepath.as_ref(),
                                 );
                             }
@@ -339,7 +344,7 @@ Misc:
                         let board_file = std::fs::read_to_string(filepath.as_ref().unwrap())
                             .expect("Failed to read the board file");
                         let board = ThreeDBoard::load(&board_file);
-                        sim = ThreeDSimulator::new(board, a, b);
+                        sim = ThreeDSimulator::new(board, a.clone(), b.clone());
                         current_sim_result = SimulationStepResult::Ok;
                         state.history.clear();
                         center_viewport(&sim, &mut state);
@@ -347,7 +352,7 @@ Misc:
                             &rh,
                             &thread,
                             &sim,
-                            current_sim_result,
+                            &current_sim_result,
                             filepath.as_ref(),
                         );
                     }
@@ -357,18 +362,22 @@ Misc:
                         let board_file =
                             std::fs::read_to_string(path).expect("Failed to read the board file");
                         let board = ThreeDBoard::load(&board_file);
-                        sim = ThreeDSimulator::new(board, a, b);
+                        sim = ThreeDSimulator::new(board, a.clone(), b.clone());
                         current_sim_result = SimulationStepResult::Ok;
                         state.history.clear();
-                        update_window_title(&rh, &thread, &sim, current_sim_result, Some(path));
+                        update_window_title(&rh, &thread, &sim, &current_sim_result, Some(path));
                     }
                 }
                 KeyboardKey::KEY_N if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
-                    sim = ThreeDSimulator::new(ThreeDBoard::default(), a, b);
+                    sim = ThreeDSimulator::new(
+                        ThreeDBoard::default(),
+                        sim.a().clone(),
+                        sim.b().clone(),
+                    );
                     current_sim_result = SimulationStepResult::Ok;
                     state.history.clear();
                     filepath = None;
-                    update_window_title(&rh, &thread, &sim, current_sim_result, filepath.as_ref());
+                    update_window_title(&rh, &thread, &sim, &current_sim_result, filepath.as_ref());
                 }
                 KeyboardKey::KEY_S if rh.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) => {
                     if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) || filepath.is_none() {
@@ -407,7 +416,7 @@ Misc:
                 KeyboardKey::KEY_ENTER => {
                     state.edit_mode = !state.edit_mode;
                     if !state.edit_mode {
-                        if let Ok(v) = state.edited_value.parse::<i64>() {
+                        if let Ok(v) = state.edited_value.parse::<BigInt>() {
                             match sim.cells().get(&state.selected_pos) {
                                 Some(Cell::InputA) => {
                                     sim.set_a(v);
@@ -415,7 +424,7 @@ Misc:
                                         &rh,
                                         &thread,
                                         &sim,
-                                        current_sim_result,
+                                        &current_sim_result,
                                         filepath.as_ref(),
                                     );
                                 }
@@ -425,7 +434,7 @@ Misc:
                                         &rh,
                                         &thread,
                                         &sim,
-                                        current_sim_result,
+                                        &current_sim_result,
                                         filepath.as_ref(),
                                     );
                                 }
@@ -598,7 +607,7 @@ fn update_window_title(
     rh: &RaylibHandle,
     thread: &RaylibThread,
     sim: &ThreeDSimulator,
-    current_sim_result: SimulationStepResult,
+    current_sim_result: &SimulationStepResult,
     path: Option<&PathBuf>,
 ) {
     rh.set_window_title(

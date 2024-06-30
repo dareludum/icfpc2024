@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use argh::FromArgs;
+use num::BigInt;
 
 use crate::three_d::{gui::gui_main, sim::SimulationStepResult};
 
@@ -15,10 +16,10 @@ pub struct ThreeDCommand {
     program_path: String,
     #[argh(positional)]
     /// the input value A
-    a: i64,
+    a: BigInt,
     #[argh(positional)]
     /// the input value B
-    b: i64,
+    b: BigInt,
     #[argh(switch, short = 'i')]
     /// run the GUI
     interactive: bool,
@@ -30,7 +31,11 @@ pub struct ThreeDCommand {
 impl ThreeDCommand {
     pub fn run(&self) {
         if self.interactive {
-            return gui_main(Some(PathBuf::from(&self.program_path)), self.a, self.b);
+            return gui_main(
+                Some(PathBuf::from(&self.program_path)),
+                self.a.clone(),
+                self.b.clone(),
+            );
         }
 
         let board_file =
@@ -40,7 +45,7 @@ impl ThreeDCommand {
             println!("Initial board:\n{}", board.save());
         }
 
-        let mut sim = ThreeDSimulator::new(board, self.a, self.b);
+        let mut sim = ThreeDSimulator::new(board, self.a.clone(), self.b.clone());
         loop {
             let result = sim.step();
             if !self.quiet {

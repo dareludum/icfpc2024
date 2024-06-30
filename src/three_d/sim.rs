@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use num::BigInt;
+
 use crate::geometry::Vector2D;
 
 use super::board::ThreeDBoard;
@@ -14,15 +16,15 @@ pub struct ThreeDSimulator {
     all_time_min_y: i32,
     all_time_max_y: i32,
     all_time_max_t: u32,
-    a: i64,
-    b: i64,
+    a: BigInt,
+    b: BigInt,
     steps_taken: u32,
     result: SimulationStepResult,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Cell {
-    Data(i64),
+    Data(BigInt),
     MoveLeft,
     MoveRight,
     MoveUp,
@@ -40,21 +42,21 @@ pub enum Cell {
     InputB,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SimulationStepResult {
     Ok,
-    Finished(i64),
+    Finished(BigInt),
     AlreadyFinished,
     Error(Vector2D),
 }
 
 impl ThreeDSimulator {
-    pub fn new(board: ThreeDBoard, a: i64, b: i64) -> Self {
+    pub fn new(board: ThreeDBoard, a: BigInt, b: BigInt) -> Self {
         let mut cells = HashMap::new();
-        for (y, row) in board.board.iter().enumerate() {
-            for (x, cell) in row.iter().enumerate() {
+        for (y, row) in board.board.into_iter().enumerate() {
+            for (x, cell) in row.into_iter().enumerate() {
                 let pos = Vector2D::new(x as i32, y as i32);
-                if let Some(cell) = *cell {
+                if let Some(cell) = cell {
                     cells.insert(pos, cell);
                 }
             }
@@ -100,19 +102,19 @@ impl ThreeDSimulator {
             * self.all_time_max_t
     }
 
-    pub fn a(&self) -> i64 {
-        self.a
+    pub fn a(&self) -> &BigInt {
+        &self.a
     }
 
-    pub fn set_a(&mut self, a: i64) {
+    pub fn set_a(&mut self, a: BigInt) {
         self.a = a;
     }
 
-    pub fn b(&self) -> i64 {
-        self.b
+    pub fn b(&self) -> &BigInt {
+        &self.b
     }
 
-    pub fn set_b(&mut self, b: i64) {
+    pub fn set_b(&mut self, b: BigInt) {
         self.b = b;
     }
 
@@ -152,10 +154,10 @@ impl ThreeDSimulator {
             }
 
             for pos in input_a_positions {
-                self.current_cells.insert(pos, Cell::Data(self.a));
+                self.current_cells.insert(pos, Cell::Data(self.a.clone()));
             }
             for pos in input_b_positions {
-                self.current_cells.insert(pos, Cell::Data(self.b));
+                self.current_cells.insert(pos, Cell::Data(self.b.clone()));
             }
 
             self.current_time += 1;
@@ -165,7 +167,7 @@ impl ThreeDSimulator {
         enum Action {
             Erase(Vector2D),
             Write(Vector2D, Cell),
-            TimeTravel(u32, Vector2D, i64),
+            TimeTravel(u32, Vector2D, BigInt),
         }
         let mut actions = vec![];
 
@@ -175,25 +177,25 @@ impl ThreeDSimulator {
                 Cell::MoveLeft => {
                     if let Some(cell) = self.current_cells.get(&pos.right()) {
                         actions.push(Action::Erase(pos.right()));
-                        actions.push(Action::Write(pos.left(), *cell));
+                        actions.push(Action::Write(pos.left(), cell.clone()));
                     }
                 }
                 Cell::MoveRight => {
                     if let Some(cell) = self.current_cells.get(&pos.left()) {
                         actions.push(Action::Erase(pos.left()));
-                        actions.push(Action::Write(pos.right(), *cell));
+                        actions.push(Action::Write(pos.right(), cell.clone()));
                     }
                 }
                 Cell::MoveUp => {
                     if let Some(cell) = self.current_cells.get(&pos.down()) {
                         actions.push(Action::Erase(pos.down()));
-                        actions.push(Action::Write(pos.up(), *cell));
+                        actions.push(Action::Write(pos.up(), cell.clone()));
                     }
                 }
                 Cell::MoveDown => {
                     if let Some(cell) = self.current_cells.get(&pos.up()) {
                         actions.push(Action::Erase(pos.up()));
-                        actions.push(Action::Write(pos.down(), *cell));
+                        actions.push(Action::Write(pos.down(), cell.clone()));
                     }
                 }
                 Cell::Add => {
@@ -206,7 +208,7 @@ impl ThreeDSimulator {
                                 actions.push(Action::Erase(pos.left()));
                                 actions.push(Action::Erase(pos.up()));
                                 let res = Cell::Data(x + y);
-                                actions.push(Action::Write(pos.right(), res));
+                                actions.push(Action::Write(pos.right(), res.clone()));
                                 actions.push(Action::Write(pos.down(), res));
                             }
                             _ => return self.error(*pos),
@@ -223,7 +225,7 @@ impl ThreeDSimulator {
                                 actions.push(Action::Erase(pos.left()));
                                 actions.push(Action::Erase(pos.up()));
                                 let res = Cell::Data(x - y);
-                                actions.push(Action::Write(pos.right(), res));
+                                actions.push(Action::Write(pos.right(), res.clone()));
                                 actions.push(Action::Write(pos.down(), res));
                             }
                             _ => return self.error(*pos),
@@ -240,7 +242,7 @@ impl ThreeDSimulator {
                                 actions.push(Action::Erase(pos.left()));
                                 actions.push(Action::Erase(pos.up()));
                                 let res = Cell::Data(x * y);
-                                actions.push(Action::Write(pos.right(), res));
+                                actions.push(Action::Write(pos.right(), res.clone()));
                                 actions.push(Action::Write(pos.down(), res));
                             }
                             _ => return self.error(*pos),
@@ -257,7 +259,7 @@ impl ThreeDSimulator {
                                 actions.push(Action::Erase(pos.left()));
                                 actions.push(Action::Erase(pos.up()));
                                 let res = Cell::Data(x / y);
-                                actions.push(Action::Write(pos.right(), res));
+                                actions.push(Action::Write(pos.right(), res.clone()));
                                 actions.push(Action::Write(pos.down(), res));
                             }
                             _ => return self.error(*pos),
@@ -274,7 +276,7 @@ impl ThreeDSimulator {
                                 actions.push(Action::Erase(pos.left()));
                                 actions.push(Action::Erase(pos.up()));
                                 let res = Cell::Data(x % y);
-                                actions.push(Action::Write(pos.right(), res));
+                                actions.push(Action::Write(pos.right(), res.clone()));
                                 actions.push(Action::Write(pos.down(), res));
                             }
                             _ => return self.error(*pos),
@@ -289,8 +291,8 @@ impl ThreeDSimulator {
                         if cell_x == cell_y {
                             actions.push(Action::Erase(pos.left()));
                             actions.push(Action::Erase(pos.up()));
-                            actions.push(Action::Write(pos.right(), *cell_x));
-                            actions.push(Action::Write(pos.down(), *cell_x));
+                            actions.push(Action::Write(pos.right(), cell_x.clone()));
+                            actions.push(Action::Write(pos.down(), cell_x.clone()));
                         }
                     }
                 }
@@ -302,8 +304,8 @@ impl ThreeDSimulator {
                         if cell_x != cell_y {
                             actions.push(Action::Erase(pos.left()));
                             actions.push(Action::Erase(pos.up()));
-                            actions.push(Action::Write(pos.right(), *cell_y));
-                            actions.push(Action::Write(pos.down(), *cell_x));
+                            actions.push(Action::Write(pos.right(), cell_y.clone()));
+                            actions.push(Action::Write(pos.down(), cell_x.clone()));
                         }
                     }
                 }
@@ -316,13 +318,16 @@ impl ThreeDSimulator {
                     ) {
                         match (cell_dx, cell_dy, cell_dt, cell_v) {
                             (Cell::Data(dx), Cell::Data(dy), Cell::Data(dt), Cell::Data(v)) => {
-                                if *dt <= 0 {
+                                if *dt <= 0.into() {
                                     return self.error(*pos);
                                 }
                                 actions.push(Action::TimeTravel(
-                                    self.current_time - (*dt as u32),
-                                    *pos - Vector2D::new(*dx as i32, *dy as i32),
-                                    *v,
+                                    self.current_time - (dt.iter_u32_digits().next().unwrap_or(0)),
+                                    *pos - Vector2D::new(
+                                        dx.iter_u64_digits().next().unwrap_or(0) as i32,
+                                        dy.iter_u64_digits().next().unwrap_or(0) as i32,
+                                    ),
+                                    v.clone(),
                                 ));
                             }
                             _ => return self.error(*pos),
@@ -367,8 +372,8 @@ impl ThreeDSimulator {
                 if submitted_value.is_some() {
                     return self.error(pos);
                 }
-                if let Cell::Data(cell) = cell {
-                    submitted_value = Some(cell);
+                if let Cell::Data(cell) = &cell {
+                    submitted_value = Some(cell.clone());
                 } else {
                     return self.error(pos);
                 }
@@ -400,13 +405,13 @@ impl ThreeDSimulator {
             let target_time = target_times.into_iter().next().unwrap();
 
             let mut target_writes = HashMap::new();
-            for (_, pos, value) in &time_travels {
-                if let Some(v) = target_writes.get(pos) {
+            for (_, pos, value) in time_travels {
+                if let Some(v) = target_writes.get(&pos) {
                     if *v != value {
-                        return self.error(*pos);
+                        return self.error(pos);
                     }
                 }
-                target_writes.insert(*pos, value);
+                target_writes.insert(pos, value);
             }
 
             self.history.truncate(target_time as usize + 1);
@@ -414,7 +419,7 @@ impl ThreeDSimulator {
             new_cells = self.history.pop().unwrap();
 
             for (pos, value) in target_writes {
-                new_cells.insert(pos, Cell::Data(*value));
+                new_cells.insert(pos, Cell::Data(value));
             }
 
             self.current_cells = new_cells;
@@ -431,12 +436,12 @@ impl ThreeDSimulator {
 
     fn error(&mut self, pos: Vector2D) -> SimulationStepResult {
         self.result = SimulationStepResult::Error(pos);
-        self.result
+        self.result.clone()
     }
 
-    fn finished(&mut self, value: i64) -> SimulationStepResult {
+    fn finished(&mut self, value: BigInt) -> SimulationStepResult {
         self.result = SimulationStepResult::Finished(value);
-        self.result
+        self.result.clone()
     }
 
     pub fn as_board(&self) -> ThreeDBoard {
@@ -456,7 +461,7 @@ impl ThreeDSimulator {
         for (pos, cell) in &self.current_cells {
             let x = (pos.x - min_x) as usize;
             let y = (pos.y - min_y) as usize;
-            board[y][x] = Some(*cell);
+            board[y][x] = Some(cell.clone());
         }
 
         ThreeDBoard { board }
@@ -481,7 +486,7 @@ impl ThreeDSimulator {
         for (pos, cell) in cells {
             let x = (pos.x - min_x) as usize;
             let y = (pos.y - min_y) as usize;
-            board[y][x] = Some(*cell);
+            board[y][x] = Some(cell.clone());
         }
 
         ThreeDBoard { board }
@@ -514,7 +519,12 @@ impl ThreeDSimulator {
                 self.current_cells.get(&pos.left()),
                 self.current_cells.get(&pos.right()),
             ) {
-                return Some(pos - Vector2D::new(*dx as i32, *dy as i32));
+                return Some(
+                    pos - Vector2D::new(
+                        dx.iter_u64_digits().next().unwrap_or(0) as i32,
+                        dy.iter_u64_digits().next().unwrap_or(0) as i32,
+                    ),
+                );
             }
         }
         None

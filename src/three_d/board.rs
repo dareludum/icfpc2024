@@ -32,11 +32,11 @@ impl ThreeDBoard {
                     "B" => row.push(Some(Cell::InputB)),
                     " " => {}
                     v => {
-                        let data = v.parse().unwrap();
+                        let data = v.parse::<i32>().unwrap();
                         if !(-99..=99).contains(&data) {
                             panic!("invalid data: {}", data);
                         }
-                        row.push(Some(Cell::Data(data)));
+                        row.push(Some(Cell::Data(data.into())));
                     }
                 };
             }
