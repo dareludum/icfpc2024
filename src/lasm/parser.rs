@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::{is_not, tag},
     character::complete::{alpha1, alphanumeric1, char, digit1, multispace1, one_of},
-    combinator::{cut, eof, map, map_res, opt, recognize, value},
+    combinator::{cut, eof, map, map_res, opt, recognize, value, verify},
     error::{context, ContextError, ParseError, VerboseError},
     multi::{fold_many0, many0, many0_count, many1, many1_count},
     sequence::{delimited, pair, preceded, terminated, tuple},
@@ -18,10 +18,12 @@ type LNodeResult<'a> = IResult<&'a str, LNodeRef, VerboseError<&'a str>>;
 fn identifier(input: &str) -> IResult<&str, Iden, VerboseError<&str>> {
     let (rest, rec) = context(
         "ident",
-        recognize(pair(
+        verify(recognize(pair(
             alt((alpha1, tag("_"))),
             many0_count(alt((alphanumeric1, tag("_")))),
-        )),
+        )), |iden: &str| {
+            iden != "take" && iden != "drop"
+        }),
     )
     .parse(input)?;
     Ok((rest, Iden::new(rec.to_owned())))
@@ -158,21 +160,27 @@ fn callseq_expr(input: &str) -> LNodeResult {
     )(input)
 }
 
-fn infix_operator(input: &str) -> IResult<&str, BinaryOp, VerboseError<&str>> {
+#[derive(Clone, Copy)]
+enum OperandOrder {
+    Preserved,
+    Reversed,
+}
+
+fn infix_operator(input: &str) -> IResult<&str, (BinaryOp, OperandOrder), VerboseError<&str>> {
     alt((
-        value(BinaryOp::IntAdd, tag("+")),
-        value(BinaryOp::IntSub, tag("-")),
-        value(BinaryOp::IntMul, tag("*")),
-        value(BinaryOp::IntDiv, tag("/")),
-        value(BinaryOp::IntMod, tag("%")),
-        value(BinaryOp::IntLt, tag("<")),
-        value(BinaryOp::IntGt, tag(">")),
-        value(BinaryOp::BoolOr, tag("|")),
-        value(BinaryOp::BoolAnd, tag("&")),
-        value(BinaryOp::StrConcat, tag(".")),
-        value(BinaryOp::StrTake, tag("take")),
-        value(BinaryOp::StrDrop, tag("drop")),
-        value(BinaryOp::Eq, tag("==")),
+        value((BinaryOp::IntAdd, OperandOrder::Preserved), tag("+")),
+        value((BinaryOp::IntSub, OperandOrder::Preserved), tag("-")),
+        value((BinaryOp::IntMul, OperandOrder::Preserved), tag("*")),
+        value((BinaryOp::IntDiv, OperandOrder::Preserved), tag("/")),
+        value((BinaryOp::IntMod, OperandOrder::Preserved), tag("%")),
+        value((BinaryOp::IntLt, OperandOrder::Preserved), tag("<")),
+        value((BinaryOp::IntGt, OperandOrder::Preserved), tag(">")),
+        value((BinaryOp::BoolOr, OperandOrder::Preserved), tag("|")),
+        value((BinaryOp::BoolAnd, OperandOrder::Preserved), tag("&")),
+        value((BinaryOp::StrConcat, OperandOrder::Preserved), tag(".")),
+        value((BinaryOp::StrTake, OperandOrder::Reversed), tag("take")),
+        value((BinaryOp::StrDrop, OperandOrder::Reversed), tag("drop")),
+        value((BinaryOp::Eq, OperandOrder::Preserved), tag("==")),
     ))(input)
 }
 
@@ -185,7 +193,12 @@ fn infix_expr(input: &str) -> LNodeResult {
             callseq_expr,
         )),
         move || expr.clone(),
-        |res, (op, item)| LNode::binary_op(op, res, item),
+        |left, ((op, order), right)| {
+            match order {
+                OperandOrder::Preserved => LNode::binary_op(op, left, right),
+                OperandOrder::Reversed => LNode::binary_op(op, right, left),
+            }
+        },
     )(input)
 }
 
