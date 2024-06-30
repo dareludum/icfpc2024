@@ -1,5 +1,6 @@
 use std::io::{stdin, Read, Write};
 
+use icfp::evaluate;
 use icfp::parse;
 use icfp::serialize_str;
 use icfp::Token;
@@ -205,22 +206,13 @@ pub fn print_response(response: String, print_raw_response: bool, add_newline: b
         println!("{}", response);
         return;
     }
-    let tokens = icfp::Token::lexer(&response)
-        .collect::<Result<Vec<_>, _>>()
-        .expect("Failed to lex response");
-    if tokens.len() == 1 {
-        if let icfp::Token::String(s) = &tokens[0] {
-            if add_newline {
-                println!("{}", s);
-            } else {
-                print!("{}", s);
-            }
-        } else {
-            eprintln!("Single raw token: {:?}", tokens[0]);
-        }
-    } else if add_newline {
-        println!("{}", response);
-    } else {
-        print!("{}", response);
+    let node = parse(&mut Token::lexer(&response)).expect("Failed to parse response");
+    match evaluate(node) {
+        Value::Bool(b) => print!("{}", b),
+        Value::Int(i) => print!("{}", i),
+        Value::Str(s) => print!("{}", s),
+    }
+    if add_newline {
+        println!();
     }
 }
