@@ -684,4 +684,14 @@ mod tests {
             efficiency4_func(v.clone() - 1) + efficiency4_func(v - 2)
         }
     }
+
+    #[test]
+    fn efficiency13() {
+        let mut value: Base94Int = 2.into(); // na
+        for _ in 0..28 {
+            value = value * 2;
+        }
+        value += 7; // heyjude
+        println!("{}", value);
+    }
 }
