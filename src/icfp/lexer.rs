@@ -2,7 +2,10 @@ use std::fmt::Write;
 
 use logos::{Lexer, Logos};
 
-use super::{base94, base94_to_int, base94_to_str};
+use super::{
+    base94::{self, Base94UInt},
+    base94_to_int, base94_to_str,
+};
 
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip r" ")]
@@ -11,8 +14,8 @@ pub enum Token {
     True,
     #[token("F")]
     False,
-    #[regex("I[\u{0021}-\u{007E}]+", integer)]
-    Integer(u64),
+    #[regex("I[\u{0021}-\u{007E}]+", u94_integer)]
+    Integer(Base94UInt),
     #[regex("S[\u{0021}-\u{007E}]*", string)]
     String(String),
 
@@ -57,9 +60,9 @@ pub enum Token {
     #[token("?")]
     If,
 
-    #[regex("L[\u{0021}-\u{007E}]+", integer)]
+    #[regex("L[\u{0021}-\u{007E}]+", u64_integer)]
     Lambda(u64),
-    #[regex("v[\u{0021}-\u{007E}]+", integer)]
+    #[regex("v[\u{0021}-\u{007E}]+", u64_integer)]
     Variable(u64),
 }
 
@@ -89,15 +92,15 @@ impl std::fmt::Display for Token {
             Token::If => f.write_char('?'),
             Token::Lambda(val) => {
                 f.write_char('L')?;
-                f.write_str(&base94::int_to_base94(*val))
+                f.write_str(&base94::int_to_base94(&(*val).into()))
             }
             Token::Variable(val) => {
                 f.write_char('v')?;
-                f.write_str(&base94::int_to_base94(*val))
+                f.write_str(&base94::int_to_base94(&(*val).into()))
             }
             Token::Integer(val) => {
                 f.write_char('I')?;
-                f.write_str(&base94::int_to_base94(*val))
+                f.write_str(&base94::int_to_base94(val))
             }
             Token::String(val) => {
                 f.write_char('S')?;
@@ -107,8 +110,12 @@ impl std::fmt::Display for Token {
     }
 }
 
-fn integer(lex: &mut Lexer<Token>) -> Option<u64> {
+fn u94_integer(lex: &mut Lexer<Token>) -> Option<Base94UInt> {
     base94_to_int(&lex.slice()[1..])
+}
+
+fn u64_integer(lex: &mut Lexer<Token>) -> u64 {
+    u94_integer(lex).unwrap().iter_u64_digits().next().unwrap()
 }
 
 fn string(lex: &mut Lexer<Token>) -> String {
@@ -137,7 +144,7 @@ mod tests {
     #[test]
     fn integer() {
         let mut lex = Token::lexer("I/6");
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(1337));
+        assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(1337u32.into()));
         assert_eq!(lex.next(), None);
     }
 
@@ -155,16 +162,16 @@ mod tests {
     fn eval_example() {
         let mut lex = Token::lexer("B$ L# B$ L\" B+ v\" v\" B* I$ I# v8");
         assert_eq!(lex.next().unwrap().unwrap(), Token::Apply);
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Lambda(2));
+        assert_eq!(lex.next().unwrap().unwrap(), Token::Lambda(2u32.into()));
         assert_eq!(lex.next().unwrap().unwrap(), Token::Apply);
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Lambda(1));
+        assert_eq!(lex.next().unwrap().unwrap(), Token::Lambda(1u32.into()));
         assert_eq!(lex.next().unwrap().unwrap(), Token::Add);
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Variable(1));
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Variable(1));
+        assert_eq!(lex.next().unwrap().unwrap(), Token::Variable(1u32.into()));
+        assert_eq!(lex.next().unwrap().unwrap(), Token::Variable(1u32.into()));
         assert_eq!(lex.next().unwrap().unwrap(), Token::Multiply);
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(3));
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(2));
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Variable(23));
+        assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(3u32.into()));
+        assert_eq!(lex.next().unwrap().unwrap(), Token::Integer(2u32.into()));
+        assert_eq!(lex.next().unwrap().unwrap(), Token::Variable(23u32.into()));
     }
 
     #[test]

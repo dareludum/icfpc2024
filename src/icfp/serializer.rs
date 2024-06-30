@@ -7,11 +7,11 @@ pub fn serialize<T: FnMut(Token)>(node: NodeRef, f: &mut T) {
         Node::Value(val) => match val {
             Value::Str(val) => f(Token::String(val.clone())),
             Value::Int(val) => {
-                if *val < 0 {
+                if val < &(0u32.into()) {
                     f(Token::UnaryMinus);
-                    f(Token::Integer((-*val).try_into().unwrap()));
+                    f(Token::Integer((-val).try_into().unwrap()));
                 } else {
-                    f(Token::Integer(*val as u64));
+                    f(Token::Integer(val.try_into().unwrap()));
                 }
             }
             Value::Bool(val) => f(if *val { Token::True } else { Token::False }),

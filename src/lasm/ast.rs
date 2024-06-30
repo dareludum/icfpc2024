@@ -96,7 +96,7 @@ impl LNode {
     }
 
     pub fn int(val: i64) -> LNodeRef {
-        Self::value(Value::Int(val))
+        Self::value(Value::Int(val.into()))
     }
 
     pub fn bool(val: bool) -> LNodeRef {

@@ -1,8 +1,10 @@
 use std::rc::Rc;
 
+use num::bigint::ToBigInt;
+
 use super::{
-    base94_to_int, base94_to_str, int_to_base94, str_to_base94, BinaryOp, Node, NodeRef, UnuaryOp,
-    Value, VarId,
+    base94::Base94Int, base94_to_int, base94_to_str, int_to_base94, str_to_base94, BinaryOp, Node,
+    NodeRef, UnuaryOp, Value, VarId,
 };
 
 pub fn evaluate(tree: Rc<Node>) -> Value {
@@ -26,8 +28,8 @@ impl Evaluator {
             let current_substitutions = self.num_substitutions;
             tree = self.beta_reduction(tree.clone());
 
-            eprintln!("Step {}", self.num_substitutions);
-            tree.pretty_print(&mut std::io::stderr()).unwrap();
+            // eprintln!("Step {}", self.num_substitutions);
+            // tree.pretty_print(&mut std::io::stderr()).unwrap();
 
             loop {
                 let (new_tree, reduced) = Self::strict_reduction(tree.clone());
@@ -145,11 +147,19 @@ impl Evaluator {
                         BinaryOp::BoolAnd => (bool(l.as_bool() && r.as_bool()), true),
                         BinaryOp::StrConcat => (str(format!("{}{}", l.as_str(), r.as_str())), true),
                         BinaryOp::StrTake => (
-                            str(r.as_str().chars().take(l.as_int() as usize).collect()),
+                            str(r
+                                .as_str()
+                                .chars()
+                                .take(l.as_int().iter_u64_digits().next().unwrap() as usize)
+                                .collect()),
                             true,
                         ),
                         BinaryOp::StrDrop => (
-                            str(r.as_str().chars().skip(l.as_int() as usize).collect()),
+                            str(r
+                                .as_str()
+                                .chars()
+                                .skip(l.as_int().iter_u64_digits().next().unwrap() as usize)
+                                .collect()),
                             true,
                         ),
                         BinaryOp::Eq => (bool(l == r), true),
@@ -221,103 +231,92 @@ impl Evaluator {
                                 }
                             }
                         }
-                    } else if let (Node::Value(Value::Int(0)), _) = (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::IntMul {
-                            return (int(0), true);
-                        }
-                    } else if let (_, Node::Value(Value::Int(0))) = (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::IntMul {
-                            return (int(0), true);
-                        }
-                    } else if let (Node::Value(Value::Int(1)), _) = (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::IntMul {
-                            return (right.clone(), true);
-                        }
-                    } else if let (_, Node::Value(Value::Int(1))) = (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::IntMul {
-                            return (left.clone(), true);
-                        }
-                    } else if let (Node::Value(Value::Int(0)), _) = (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::IntAdd {
-                            return (right.clone(), true);
-                        }
-                    } else if let (_, Node::Value(Value::Int(0))) = (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::IntAdd {
-                            return (left.clone(), true);
-                        }
-                    } else if let (_, Node::Value(Value::Int(0))) = (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::IntSub {
-                            return (left.clone(), true);
-                        }
-                    } else if let (_, Node::Value(Value::Int(1))) = (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::IntDiv {
-                            return (left.clone(), true);
-                        }
-                    } else if let (Node::Value(Value::Bool(false)), _) =
-                        (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::BoolAnd {
-                            return (bool(false), true);
-                        }
-                    } else if let (_, Node::Value(Value::Bool(false))) =
-                        (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::BoolAnd {
-                            return (bool(false), true);
-                        }
-                    } else if let (Node::Value(Value::Bool(true)), _) =
-                        (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::BoolAnd {
-                            return (right.clone(), true);
-                        }
-                    } else if let (_, Node::Value(Value::Bool(true))) =
-                        (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::BoolAnd {
-                            return (left.clone(), true);
-                        }
-                    } else if let (Node::Value(Value::Bool(true)), _) =
-                        (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::BoolOr {
-                            return (bool(true), true);
-                        }
-                    } else if let (_, Node::Value(Value::Bool(true))) =
-                        (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::BoolOr {
-                            return (bool(true), true);
-                        }
-                    } else if let (Node::Value(Value::Bool(false)), _) =
-                        (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::BoolOr {
-                            return (right.clone(), true);
-                        }
-                    } else if let (_, Node::Value(Value::Bool(false))) =
-                        (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::BoolOr {
-                            return (left.clone(), true);
-                        }
-                    } else if let (Node::Value(Value::Str(s)), _) = (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::StrConcat && s.is_empty() {
-                            return (right.clone(), true);
-                        }
-                    } else if let (_, Node::Value(Value::Str(s))) = (left.as_ref(), right.as_ref())
-                    {
-                        if *op == BinaryOp::StrConcat && s.is_empty() {
-                            return (left.clone(), true);
+                    } else {
+                        match op {
+                            BinaryOp::IntAdd => match (left.as_ref(), right.as_ref()) {
+                                (Node::Value(Value::Int(v)), _) if v == &Base94Int::ZERO => {
+                                    return (right.clone(), true);
+                                }
+                                (_, Node::Value(Value::Int(v))) if v == &Base94Int::ZERO => {
+                                    return (left.clone(), true);
+                                }
+                                _ => {}
+                            },
+                            BinaryOp::IntSub => match (left.as_ref(), right.as_ref()) {
+                                (_, Node::Value(Value::Int(v))) if v == &Base94Int::ZERO => {
+                                    return (left.clone(), true);
+                                }
+                                _ => {}
+                            },
+                            BinaryOp::IntMul => match (left.as_ref(), right.as_ref()) {
+                                (Node::Value(Value::Int(v)), _)
+                                | (_, Node::Value(Value::Int(v)))
+                                    if v == &Base94Int::ZERO =>
+                                {
+                                    return (int(Base94Int::ZERO), true);
+                                }
+                                (Node::Value(Value::Int(v)), _) if v == &1.into() => {
+                                    return (right.clone(), true);
+                                }
+                                (_, Node::Value(Value::Int(v))) if v == &1.into() => {
+                                    return (left.clone(), true);
+                                }
+                                _ => {}
+                            },
+                            BinaryOp::IntDiv => match (left.as_ref(), right.as_ref()) {
+                                (_, Node::Value(Value::Int(v))) if v == &1.into() => {
+                                    return (left.clone(), true);
+                                }
+                                _ => {}
+                            },
+                            BinaryOp::BoolOr => match (left.as_ref(), right.as_ref()) {
+                                (Node::Value(Value::Bool(true)), _)
+                                | (_, Node::Value(Value::Bool(true))) => {
+                                    return (bool(true), true);
+                                }
+                                (Node::Value(Value::Bool(false)), _) => {
+                                    return (right.clone(), true);
+                                }
+                                (_, Node::Value(Value::Bool(false))) => {
+                                    return (left.clone(), true);
+                                }
+                                _ => {}
+                            },
+                            BinaryOp::BoolAnd => match (left.as_ref(), right.as_ref()) {
+                                (Node::Value(Value::Bool(false)), _)
+                                | (_, Node::Value(Value::Bool(false))) => {
+                                    return (bool(false), true);
+                                }
+                                (Node::Value(Value::Bool(true)), _) => {
+                                    return (right.clone(), true);
+                                }
+                                (_, Node::Value(Value::Bool(true))) => {
+                                    return (left.clone(), true);
+                                }
+                                _ => {}
+                            },
+                            BinaryOp::StrConcat => match (left.as_ref(), right.as_ref()) {
+                                (Node::Value(Value::Str(s)), _) if s.is_empty() => {
+                                    return (right.clone(), true);
+                                }
+                                (_, Node::Value(Value::Str(s))) if s.is_empty() => {
+                                    return (left.clone(), true);
+                                }
+                                _ => {}
+                            },
+                            BinaryOp::StrTake => match (left.as_ref(), right.as_ref()) {
+                                (Node::Value(Value::Int(v)), _) if v == &Base94Int::ZERO => {
+                                    return (right.clone(), true);
+                                }
+                                _ => {}
+                            },
+                            BinaryOp::StrDrop => match (left.as_ref(), right.as_ref()) {
+                                (Node::Value(Value::Int(v)), _) if v == &Base94Int::ZERO => {
+                                    return (right.clone(), true);
+                                }
+                                _ => {}
+                            },
+                            _ => {}
                         }
                     }
 
@@ -342,12 +341,18 @@ impl Evaluator {
                         UnuaryOp::IntNeg => (int(-v.as_int()), true),
                         UnuaryOp::BoolNot => (bool(!v.as_bool()), true),
                         UnuaryOp::StrToInt => (
-                            int(base94_to_int(&str_to_base94(v.as_str())).unwrap() as i64),
+                            int(base94_to_int(&str_to_base94(v.as_str()))
+                                .unwrap()
+                                .to_bigint()
+                                .unwrap()),
                             true,
                         ),
-                        UnuaryOp::IntToStr => {
-                            (str(base94_to_str(&int_to_base94(v.as_int() as u64))), true)
-                        }
+                        UnuaryOp::IntToStr => (
+                            str(base94_to_str(&int_to_base94(
+                                &v.as_int().to_biguint().unwrap(),
+                            ))),
+                            true,
+                        ),
                     }
                 } else if reduced {
                     (Rc::new(Node::UnuaryOp { op: *op, body }), true)
@@ -431,7 +436,7 @@ impl Evaluator {
     }
 }
 
-fn int(v: i64) -> NodeRef {
+fn int(v: Base94Int) -> NodeRef {
     Rc::new(Node::Value(Value::Int(v)))
 }
 
@@ -474,7 +479,7 @@ mod tests {
                     right: Rc::new(Node::Value(Value::Str(" World!".to_string()))),
                 }),
             }),
-            value: Rc::new(Node::Value(Value::Int(42))),
+            value: Rc::new(Node::Value(Value::Int(42.into()))),
         });
         assert_eq!(evaluate(tree), Value::Str("Hello World!".to_string()));
     }
@@ -482,7 +487,7 @@ mod tests {
     #[test]
     fn unary_negate() {
         const TASK: &str = "U- I$";
-        assert_eq!(eval(TASK), Value::Int(-3));
+        assert_eq!(eval(TASK), Value::Int((-3).into()));
     }
 
     #[test]
@@ -494,7 +499,7 @@ mod tests {
     #[test]
     fn unary_string_to_int() {
         const TASK: &str = "U# S4%34";
-        assert_eq!(eval(TASK), Value::Int(15818151));
+        assert_eq!(eval(TASK), Value::Int(15818151.into()));
     }
 
     #[test]
@@ -506,31 +511,31 @@ mod tests {
     #[test]
     fn binary_add() {
         const TASK: &str = "B+ I# I$";
-        assert_eq!(eval(TASK), Value::Int(5));
+        assert_eq!(eval(TASK), Value::Int(5.into()));
     }
 
     #[test]
     fn binary_sub() {
         const TASK: &str = "B- I$ I#";
-        assert_eq!(eval(TASK), Value::Int(1));
+        assert_eq!(eval(TASK), Value::Int(1.into()));
     }
 
     #[test]
     fn binary_mul() {
         const TASK: &str = "B* I$ I#";
-        assert_eq!(eval(TASK), Value::Int(6));
+        assert_eq!(eval(TASK), Value::Int(6.into()));
     }
 
     #[test]
     fn binary_div() {
         const TASK: &str = "B/ U- I( I#";
-        assert_eq!(eval(TASK), Value::Int(-3));
+        assert_eq!(eval(TASK), Value::Int((-3).into()));
     }
 
     #[test]
     fn binary_mod() {
         const TASK: &str = "B% U- I( I#";
-        assert_eq!(eval(TASK), Value::Int(-1));
+        assert_eq!(eval(TASK), Value::Int((-1).into()));
     }
 
     #[test]
@@ -598,7 +603,7 @@ mod tests {
         const TASK: &str = "B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I! I\" B$ L$ B+ B$ v\" v$ B$ v\" v$ B- v# I\" I%";
         let mut evaluator = Evaluator::new();
         let result = evaluator.evaluate(parse(&mut Token::lexer(TASK)).unwrap());
-        assert_eq!(result, Value::Int(16));
+        assert_eq!(result, Value::Int(16.into()));
         assert_eq!(evaluator.num_substitutions, 109);
     }
 
@@ -619,6 +624,12 @@ mod tests {
     fn lambdaman10() {
         const TASK: &str = "B. SF B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I;Y S B. ? B= B% v# IS I! S~ S B. ? B= B% v# I, I! Sa Sl B$ v\" B+ v# I\" I\"";
         // Make sure this doesn't overflow stack
+        eval(TASK);
+    }
+
+    #[test]
+    fn test_3d_response() {
+        const TASK: &str = "B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I! Su B. B$ v\" B/ v# IH BT I\" BD B% v# IH Su4qVj}8^WX\\U[]ZY9w~f%-0\"/!2$gH.375)lP,n I(t'T]i`L\\q}xfv-+AbPWONl[f;FyoN|Sjm%ifIR!%r:L1/h4KYz~x@v}PFUj2npub/DuW6c16@K3(*qvWF";
         eval(TASK);
     }
 }

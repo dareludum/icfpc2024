@@ -1,30 +1,21 @@
+use num::{BigInt, BigUint};
+
 const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n";
 
-pub fn base94_to_int(s: &str) -> Option<u64> {
-    let mut result = 0u64;
-    let mut power = 1u64;
-    const BASE: u64 = 94;
-    for c in s.chars().rev() {
-        let digit = c as u64 - 33; // Subtract 33 to convert from ASCII to base-94
-        if digit >= BASE {
-            return None; // Invalid character
-        }
-        result += digit * power;
-        power *= BASE;
-    }
-    Some(result)
+pub type Base94UInt = BigUint;
+pub type Base94Int = BigInt;
+
+pub fn base94_to_int(s: &str) -> Option<BigUint> {
+    let bytes = s.as_bytes().iter().map(|b| b - 33).collect::<Vec<_>>();
+    BigUint::from_radix_be(&bytes, 94)
 }
 
-pub fn int_to_base94(s: u64) -> String {
-    let mut result = String::new();
-    let mut slice = s;
-    const BASE: u64 = 94;
-    while slice > 0 {
-        let digit = slice % BASE;
-        result.push((digit + 33) as u8 as char); // Add 33 to convert from base-94 to ASCII
-        slice /= BASE;
-    }
-    result.chars().rev().collect()
+pub fn int_to_base94(s: &BigUint) -> String {
+    s.to_radix_be(94)
+        .iter()
+        .map(|&b| b + 33)
+        .map(|b| b as char)
+        .collect()
 }
 
 pub fn base94_to_str(s: &str) -> String {

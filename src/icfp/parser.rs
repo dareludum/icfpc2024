@@ -1,8 +1,6 @@
 use std::rc::Rc;
 
-use super::{
-    Token, {BinaryOp, Node, NodeRef, UnuaryOp, Value, VarId},
-};
+use super::{BinaryOp, Node, NodeRef, Token, UnuaryOp, Value, VarId};
 use logos::Lexer;
 
 #[derive(Debug, Clone)]
@@ -35,7 +33,7 @@ pub fn parse(lexer: &mut Lexer<Token>) -> Result<NodeRef, ParsingError> {
         // litterals
         Token::True => Rc::new(Node::Value(Value::Bool(true))),
         Token::False => Rc::new(Node::Value(Value::Bool(false))),
-        Token::Integer(value) => Rc::new(Node::Value(Value::Int(value as i64))),
+        Token::Integer(value) => Rc::new(Node::Value(Value::Int(value.into()))),
         Token::String(value) => Rc::new(Node::Value(Value::Str(value))),
 
         // unuary

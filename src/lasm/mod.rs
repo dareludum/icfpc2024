@@ -14,7 +14,6 @@ mod tests {
     use super::parse;
     use crate::icfp::evaluate;
     use crate::lasm::ast::BinaryOp;
-    use crate::lasm::Iden;
     use crate::lasm::LNode;
 
     #[test]
@@ -28,7 +27,7 @@ mod tests {
         "#;
         let node = parse(sample).unwrap();
         let node = compile(node);
-        assert_eq!(evaluate(node).as_int(), 10);
+        assert_eq!(evaluate(node).as_int(), &10.into());
     }
 
     #[test]
@@ -41,7 +40,7 @@ mod tests {
         "#;
         let node = parse(sample).unwrap();
         let node = compile(node);
-        assert_eq!(evaluate(node).as_int(), 4);
+        assert_eq!(evaluate(node).as_int(), &4.into());
     }
 
     #[test]
@@ -73,7 +72,7 @@ mod tests {
         "#;
         let node = parse(sample).unwrap();
         let node = compile(node);
-        assert_eq!(evaluate(node).as_int(), 1);
+        assert_eq!(evaluate(node).as_int(), &1.into());
     }
 
     #[test]
@@ -84,7 +83,7 @@ mod tests {
         "#;
         let node = parse(sample).unwrap();
         let node = compile(node);
-        assert_eq!(evaluate(node).as_int(), 4);
+        assert_eq!(evaluate(node).as_int(), &4.into());
     }
 
     #[test]
@@ -94,7 +93,7 @@ mod tests {
         "#;
         let node = parse(sample).unwrap();
         let node = compile(node);
-        assert_eq!(evaluate(node).as_int(), 5);
+        assert_eq!(evaluate(node).as_int(), &5.into());
     }
 
     #[test]
@@ -105,7 +104,7 @@ mod tests {
         "#;
         let node = parse(sample).unwrap();
         let node = compile(node);
-        assert_eq!(evaluate(node).as_int(), 6);
+        assert_eq!(evaluate(node).as_int(), &6.into());
     }
 
     #[test]
@@ -116,14 +115,14 @@ mod tests {
         "#;
         let node = parse(sample).unwrap();
         let node = compile(node);
-        assert_eq!(evaluate(node).as_int(), 6);
+        assert_eq!(evaluate(node).as_int(), &6.into());
     }
 
     #[test]
     fn test_integer() {
         let sample = r" 1 ";
         let node = parse(sample).unwrap();
-        assert_eq!(evaluate(compile(node)).as_int(), 1);
+        assert_eq!(evaluate(compile(node)).as_int(), &1.into());
     }
 
     #[test]
@@ -133,7 +132,7 @@ mod tests {
             1
         "#;
         let node = parse(sample).unwrap();
-        assert_eq!(evaluate(compile(node)).as_int(), 1);
+        assert_eq!(evaluate(compile(node)).as_int(), &1.into());
     }
 
     #[test]
@@ -156,7 +155,7 @@ mod tests {
             in a
         "#;
         let node = parse(sample).unwrap();
-        assert_eq!(evaluate(compile(node)).as_int(), 1);
+        assert_eq!(evaluate(compile(node)).as_int(), &1.into());
     }
 
     #[test]
@@ -165,7 +164,7 @@ mod tests {
             let f a = a; in f 1
         "#;
         let node = parse(sample).unwrap();
-        assert_eq!(evaluate(compile(node)).as_int(), 1);
+        assert_eq!(evaluate(compile(node)).as_int(), &1.into());
     }
 
     #[test]
@@ -174,7 +173,7 @@ mod tests {
             if true { 1 } else { 2 }
         "#;
         let node = parse(sample).unwrap();
-        assert_eq!(evaluate(compile(node)).as_int(), 1);
+        assert_eq!(evaluate(compile(node)).as_int(), &1.into());
     }
 
     #[test]
@@ -187,7 +186,7 @@ mod tests {
             Rc::new(LNode::BinaryOp {
                 op: BinaryOp::IntSub,
                 left: LNode::var("x".to_owned()),
-                right: LNode::int(1),
+                right: LNode::int(1.into()),
             }),
             node
         );

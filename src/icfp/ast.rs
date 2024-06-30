@@ -2,10 +2,12 @@ use std::{fmt::Display, rc::Rc};
 
 use display_tree::{AsTree, DisplayTree};
 
+use super::base94::Base94Int;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Value {
     Str(String),
-    Int(i64),
+    Int(Base94Int),
     Bool(bool),
 }
 
@@ -27,9 +29,9 @@ impl Value {
         }
     }
 
-    pub fn as_int(&self) -> i64 {
+    pub fn as_int(&self) -> &Base94Int {
         match self {
-            Value::Int(i) => *i,
+            Value::Int(i) => i,
             _ => panic!("Expected int"),
         }
     }
