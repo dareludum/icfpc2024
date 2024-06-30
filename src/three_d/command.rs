@@ -22,6 +22,9 @@ pub struct ThreeDCommand {
     #[argh(switch, short = 'i')]
     /// run the GUI
     interactive: bool,
+    #[argh(switch, short = 'q')]
+    /// quiet mode, only print the answer
+    quiet: bool,
 }
 
 impl ThreeDCommand {
@@ -33,20 +36,28 @@ impl ThreeDCommand {
         let board_file =
             std::fs::read_to_string(&self.program_path).expect("Failed to read the board file");
         let board = ThreeDBoard::load(&board_file);
-        println!("Initial board:\n{}", board.save());
+        if !self.quiet {
+            println!("Initial board:\n{}", board.save());
+        }
 
         let mut sim = ThreeDSimulator::new(board, self.a, self.b);
         loop {
             let result = sim.step();
-            println!("Board[t={}]:\n{}", sim.time(), sim.as_board().save());
+            if !self.quiet {
+                println!("Board[t={}]:\n{}", sim.time(), sim.as_board().save());
+            }
             match result {
                 SimulationStepResult::Ok => {}
                 SimulationStepResult::Finished(v) => {
-                    println!(
-                        "Program finished successfully: {} (score={})",
-                        v,
-                        sim.score()
-                    );
+                    if self.quiet {
+                        println!("{}", v);
+                    } else {
+                        println!(
+                            "Program finished successfully: {} (score={})",
+                            v,
+                            sim.score()
+                        );
+                    }
                     break;
                 }
                 SimulationStepResult::AlreadyFinished => unreachable!(),

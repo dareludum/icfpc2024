@@ -15,7 +15,7 @@ pub use solver::{Parameter, Solver};
 
 use crate::{
     compression::dict_compression::LambdamanTreeWalkLzCompressed,
-    lambdaman_alt::{LambdamanTreeWalk, RandomWalk},
+    lambdaman_alt::{BlindAgentSolver, LambdamanTreeWalk, RandomStepAgent},
     spaceship::{SpaceshipGreedy, SpaceshipOneByOne},
 };
 
@@ -26,7 +26,10 @@ static SOLVERS: Lazy<HashMap<&'static str, Box<dyn Solver>>> = Lazy::new(|| {
         "lm:tree_walk_lz",
         Box::<LambdamanTreeWalkLzCompressed>::default(),
     );
-    solvers.insert("lm:random_walk", Box::<RandomWalk>::default());
+    solvers.insert(
+        "lm:random_step",
+        Box::<BlindAgentSolver<RandomStepAgent>>::default(),
+    );
     solvers.insert("ss:greedy", Box::<SpaceshipGreedy>::default());
     solvers.insert("ss:one_by_one", Box::<SpaceshipOneByOne>::default());
     // Add more solvers here

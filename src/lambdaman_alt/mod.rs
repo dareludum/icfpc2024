@@ -1,6 +1,6 @@
+mod blind_agent;
 mod model;
-mod random_walk;
 mod tree_walk;
 
-pub use random_walk::RandomWalk;
+pub use blind_agent::{BlindAgentSolver, RandomStepAgent};
 pub use tree_walk::LambdamanTreeWalk;
