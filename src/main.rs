@@ -14,6 +14,7 @@ mod icfp;
 // TODO: Remove when fixed
 #[allow(dead_code)]
 #[allow(clippy::all)]
+mod compression;
 mod lambdaman;
 mod lambdaman_alt;
 mod lasm;

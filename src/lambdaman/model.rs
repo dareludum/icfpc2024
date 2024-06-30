@@ -57,12 +57,12 @@ impl Path {
         self.moves.iter()
     }
 
-    pub fn iter_positions<'a>(&'a self) -> impl Iterator<Item = (Point, usize)> + 'a {
+    pub fn iter_positions(&self) -> impl Iterator<Item = (Point, usize)> + '_ {
         successors(Some((self.start_pos, 0)), |&(p, i)| {
             if i >= self.moves.len() {
-                return None;
+                None
             } else {
-                return Some((p.apply(self.moves[i]), i + 1));
+                Some((p.apply(self.moves[i]), i + 1))
             }
         })
     }
@@ -127,7 +127,7 @@ impl Grid {
                 panic!("inconsistent line length");
             }
             width = line.len();
-            data.extend(line.chars().map(|c| Cell::from(c)));
+            data.extend(line.chars().map(Cell::from));
             height += 1;
             if line.find('L').is_some() {
                 let x = line.find('L').unwrap();
@@ -279,7 +279,7 @@ impl Grid {
         res
     }
 
-    pub fn iterate_cells<'a>(&'a self) -> impl Iterator<Item = (Point, Cell)> + 'a {
+    pub fn iterate_cells(&self) -> impl Iterator<Item = (Point, Cell)> + '_ {
         (0..self.data.len()).map(move |i| {
             let x = i % self.stride;
             let y = i / self.stride;
@@ -315,6 +315,7 @@ impl Grid {
     }
 }
 
+#[allow(clippy::to_string_trait_impl)]
 impl ToString for Grid {
     fn to_string(&self) -> String {
         let mut res = String::new();

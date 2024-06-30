@@ -16,12 +16,12 @@ use super::model::{Cell, LambdamanModel};
 
 #[derive(Debug, Clone, Default)]
 pub struct LambdamanTreeWalk {
-    problem: Problem,
-    model: LambdamanModel,
+    pub problem: Problem,
+    pub model: LambdamanModel,
 }
 
 impl LambdamanTreeWalk {
-    fn build_graph(&self) -> (UnGraph<Vector2D, ()>, NodeIndex) {
+    pub fn build_graph(&self) -> (UnGraph<Vector2D, ()>, NodeIndex) {
         let mut graph = UnGraph::default();
 
         let mut node_idx_map = HashMap::new();
