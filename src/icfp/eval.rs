@@ -62,7 +62,7 @@ impl Evaluator {
             Node::Value(_) => tree,
             Node::Lambda { .. } => tree,
             Node::Variable(_) => panic!("Unsubstituted variable"),
-            Node::Apply { f, value } => {
+            Node::Apply { strat, f, value } => {
                 let node = self.beta_reduction(f.clone());
                 match node.as_ref() {
                     Node::Lambda { var, body } => {
@@ -71,6 +71,7 @@ impl Evaluator {
                         node
                     }
                     _ => Rc::new(Node::Apply {
+                        strat: *strat,
                         f: node,
                         value: self.beta_reduction(value.clone()),
                     }),
@@ -116,12 +117,13 @@ impl Evaluator {
                 }
             }
             Node::Variable(_) => (tree, false),
-            Node::Apply { f, value } => {
+            Node::Apply { strat, f, value } => {
                 let (f, reduced_f) = Self::strict_reduction(f.clone());
                 let (value, reduced_value) = Self::strict_reduction(value.clone());
                 if reduced_f || reduced_value {
                     (
                         Rc::new(Node::Apply {
+                            strat: *strat,
                             f: f.clone(),
                             value: value.clone(),
                         }),
@@ -410,7 +412,8 @@ impl Evaluator {
                     node
                 }
             }
-            Node::Apply { f, value: v } => Rc::new(Node::Apply {
+            Node::Apply { strat, f, value: v } => Rc::new(Node::Apply {
+                strat: *strat,
                 f: Self::substitute(f.clone(), var, value.clone()),
                 value: Self::substitute(v.clone(), var, value),
             }),
@@ -452,6 +455,8 @@ fn str(v: String) -> NodeRef {
 mod tests {
     use logos::Logos;
 
+    use crate::icfp::ast::EvalStrat;
+
     use super::super::{
         parse, Token, {BinaryOp, VarId},
     };
@@ -465,7 +470,9 @@ mod tests {
     #[test]
     fn example() {
         let tree = Rc::new(Node::Apply {
+            strat: EvalStrat::Name,
             f: Rc::new(Node::Apply {
+                strat: EvalStrat::Name,
                 f: Rc::new(Node::Lambda {
                     var: VarId::new(2),
                     body: Rc::new(Node::Lambda {

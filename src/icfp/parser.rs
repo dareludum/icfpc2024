@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use super::{BinaryOp, Node, NodeRef, Token, UnuaryOp, Value, VarId};
+use super::{ast::EvalStrat, BinaryOp, Node, NodeRef, Token, UnuaryOp, Value, VarId};
 use logos::Lexer;
 
 #[derive(Debug, Clone)]
@@ -68,7 +68,18 @@ pub fn parse(lexer: &mut Lexer<Token>) -> Result<NodeRef, ParsingError> {
             body: parse(lexer)?,
         }),
         Token::Variable(id) => Rc::new(Node::Variable(VarId::new(id))),
-        Token::Apply => Rc::new(Node::Apply {
+        Token::ApplyName => Rc::new(Node::Apply {
+            strat: EvalStrat::Name,
+            f: parse(lexer)?,
+            value: parse(lexer)?,
+        }),
+        Token::ApplyValue => Rc::new(Node::Apply {
+            strat: EvalStrat::Value,
+            f: parse(lexer)?,
+            value: parse(lexer)?,
+        }),
+        Token::ApplyLazy => Rc::new(Node::Apply {
+            strat: EvalStrat::Lazy,
             f: parse(lexer)?,
             value: parse(lexer)?,
         }),

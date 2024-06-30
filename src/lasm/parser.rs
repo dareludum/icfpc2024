@@ -55,14 +55,20 @@ fn let_expr(input: &str) -> LNodeResult {
         "let",
         tuple((
             preceded(tag("let"), cut(many1(binding))),
-            cut(preceded(preceded(sep_many1, tag("in")), expr)),
+            cut(preceded(
+                preceded(sep_many1, tag("in")),
+                context("let body", expr),
+            )),
         )),
     )(input)?;
     Ok((rest, LNode::Let { bindings, body }.into()))
 }
 
 fn paren_group_expr(input: &str) -> LNodeResult {
-    delimited(tag("("), cut(expr), tag(")")).parse(input)
+    context(
+        "paren group",
+        terminated(preceded(char('('), cut(expr)), char(')')),
+    )(input)
 }
 
 pub fn single_line_comment<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, (), E> {

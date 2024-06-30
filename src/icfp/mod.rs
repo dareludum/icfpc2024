@@ -5,7 +5,7 @@ mod lexer;
 mod parser;
 mod serializer;
 
-pub use ast::{BinaryOp, Node, NodeRef, UnuaryOp, Value, VarId};
+pub use ast::{BinaryOp, EvalStrat, Node, NodeRef, UnuaryOp, Value, VarId};
 pub use base94::*;
 pub use eval::evaluate;
 pub use lexer::Token;

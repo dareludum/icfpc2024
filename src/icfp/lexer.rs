@@ -55,7 +55,11 @@ pub enum Token {
     #[token("BD")]
     Drop,
     #[token("B$")]
-    Apply,
+    ApplyName,
+    #[token("B!")]
+    ApplyValue,
+    #[token("B~")]
+    ApplyLazy,
 
     #[token("?")]
     If,
@@ -88,7 +92,9 @@ impl std::fmt::Display for Token {
             Token::StringConcat => f.write_str("B."),
             Token::Take => f.write_str("BT"),
             Token::Drop => f.write_str("BD"),
-            Token::Apply => f.write_str("B$"),
+            Token::ApplyName => f.write_str("B$"),
+            Token::ApplyValue => f.write_str("B!"),
+            Token::ApplyLazy => f.write_str("B~"),
             Token::If => f.write_char('?'),
             Token::Lambda(val) => {
                 f.write_char('L')?;
@@ -165,9 +171,9 @@ mod tests {
     #[test]
     fn eval_example() {
         let mut lex = Token::lexer("B$ L# B$ L\" B+ v\" v\" B* I$ I# v8");
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Apply);
+        assert_eq!(lex.next().unwrap().unwrap(), Token::ApplyName);
         assert_eq!(lex.next().unwrap().unwrap(), Token::Lambda(2u32.into()));
-        assert_eq!(lex.next().unwrap().unwrap(), Token::Apply);
+        assert_eq!(lex.next().unwrap().unwrap(), Token::ApplyName);
         assert_eq!(lex.next().unwrap().unwrap(), Token::Lambda(1u32.into()));
         assert_eq!(lex.next().unwrap().unwrap(), Token::Add);
         assert_eq!(lex.next().unwrap().unwrap(), Token::Variable(1u32.into()));

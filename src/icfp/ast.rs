@@ -102,6 +102,19 @@ impl Display for UnuaryOp {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EvalStrat {
+    Name,
+    Value,
+    Lazy,
+}
+
+impl Display for EvalStrat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, DisplayTree)]
 pub enum Node {
     Value(#[node_label] Value),
@@ -114,6 +127,8 @@ pub enum Node {
     },
     Variable(#[node_label] VarId),
     Apply {
+        #[node_label]
+        strat: EvalStrat,
         #[tree]
         f: NodeRef,
         #[tree]
@@ -154,8 +169,8 @@ impl Node {
         Rc::new(Node::Variable(id))
     }
 
-    pub fn apply(f: NodeRef, value: NodeRef) -> NodeRef {
-        Rc::new(Node::Apply { f, value })
+    pub fn apply(strat: EvalStrat, f: NodeRef, value: NodeRef) -> NodeRef {
+        Rc::new(Node::Apply { strat, f, value })
     }
 
     pub fn lambda(var: VarId, body: NodeRef) -> NodeRef {
@@ -163,6 +178,6 @@ impl Node {
     }
 
     pub fn bind(var: VarId, value: NodeRef, body: NodeRef) -> NodeRef {
-        Self::apply(Self::lambda(var, body), value)
+        Self::apply(EvalStrat::Value, Self::lambda(var, body), value)
     }
 }

@@ -45,7 +45,7 @@ impl LambdamanTreeWalk {
                     let left = Vector2D::new(x as i32 - 1, y as i32);
                     graph.add_edge(node_idx_map[&curr], node_idx_map[&left], ());
                 }
-                if x + 1 < self.model.width as usize && self.model.map[y][x + 1] != Cell::Wall {
+                if x + 1 < self.model.width && self.model.map[y][x + 1] != Cell::Wall {
                     let right = Vector2D::new(x as i32 + 1, y as i32);
                     graph.add_edge(node_idx_map[&curr], node_idx_map[&right], ());
                 }
@@ -53,7 +53,7 @@ impl LambdamanTreeWalk {
                     let up = Vector2D::new(x as i32, y as i32 - 1);
                     graph.add_edge(node_idx_map[&curr], node_idx_map[&up], ());
                 }
-                if y + 1 < self.model.height as usize && self.model.map[y + 1][x] != Cell::Wall {
+                if y + 1 < self.model.height && self.model.map[y + 1][x] != Cell::Wall {
                     let down = Vector2D::new(x as i32, y as i32 + 1);
                     graph.add_edge(node_idx_map[&curr], node_idx_map[&down], ());
                 }

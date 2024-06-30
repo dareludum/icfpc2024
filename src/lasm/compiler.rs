@@ -1,6 +1,6 @@
 use std::{collections::HashMap, rc::Rc};
 
-use crate::icfp::{Node, NodeRef, VarId};
+use crate::icfp::{EvalStrat, Node, NodeRef, VarId};
 
 use super::{ast::Binding, Iden, LNode, LNodeRef};
 
@@ -64,15 +64,15 @@ impl Compiler {
         let cc = {
             let body = {
                 let f = Node::var(v1);
-                let value = Node::apply(Node::var(v2), Node::var(v2));
-                Node::apply(f, value)
+                let value = Node::apply(EvalStrat::Name, Node::var(v2), Node::var(v2));
+                Node::apply(EvalStrat::Name, f, value)
             };
             Node::lambda(v2, body)
         };
         let node = {
             let body = {
                 let f = cc.clone();
-                Node::apply(f, cc)
+                Node::apply(EvalStrat::Name, f, cc)
             };
             Node::lambda(v1, body)
         };
@@ -105,7 +105,7 @@ impl Compiler {
         body = {
             let f = self.get_y_combinator();
             let value = Node::lambda(var_id, body);
-            Node::apply(f, value)
+            Node::apply(EvalStrat::Value, f, value)
         };
         (var_id, body)
     }
@@ -115,6 +115,7 @@ impl Compiler {
             super::LNode::Litteral(val) => Node::Value(val.clone()),
             super::LNode::Variable(var) => Node::Variable(self.resolve(var)),
             super::LNode::Apply { func, param } => Node::Apply {
+                strat: EvalStrat::Name,
                 f: self.compile_node(func),
                 value: self.compile_node(param),
             },

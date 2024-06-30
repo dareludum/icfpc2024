@@ -247,6 +247,7 @@ fn build_lz_lambdas_ast(vars: &Vec<(usize, &str)>, body: icfp::NodeRef) -> icfp:
         });
 
         let apply = icfp::NodeRef::new(icfp::Node::Apply {
+            strat: icfp::EvalStrat::Name,
             f: lambda,
             value: icfp::NodeRef::new(icfp::Node::Value(icfp::Value::Str(val.to_string()))),
         });

@@ -21,8 +21,16 @@ pub fn serialize<T: FnMut(Token)>(node: NodeRef, f: &mut T) {
             serialize(body.clone(), f);
         }
         Node::Variable(var_id) => f(Token::Variable(var_id.id())),
-        Node::Apply { f: func, value } => {
-            f(Token::Apply);
+        Node::Apply {
+            strat,
+            f: func,
+            value,
+        } => {
+            f(match strat {
+                super::ast::EvalStrat::Name => Token::ApplyName,
+                super::ast::EvalStrat::Value => Token::ApplyValue,
+                super::ast::EvalStrat::Lazy => Token::ApplyLazy,
+            });
             serialize(func.clone(), f);
             serialize(value.clone(), f);
         }
