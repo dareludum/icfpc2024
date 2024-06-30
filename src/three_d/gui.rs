@@ -370,12 +370,12 @@ Misc:
                             .save_file()
                         {
                             filepath = Some(path);
-                            let board = sim.as_board().save();
+                            let board = sim.initial_board().save();
                             std::fs::write(filepath.as_ref().unwrap(), board)
                                 .expect("Failed to write to file");
                         }
                     } else {
-                        let board = sim.as_board().save();
+                        let board = sim.initial_board().save();
                         std::fs::write(filepath.as_ref().unwrap(), board)
                             .expect("Failed to write to file");
                     }

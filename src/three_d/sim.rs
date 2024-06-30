@@ -462,6 +462,31 @@ impl ThreeDSimulator {
         ThreeDBoard { board }
     }
 
+    pub fn initial_board(&self) -> ThreeDBoard {
+        let cells = self.history.first().unwrap_or(&self.current_cells);
+
+        let mut min_x = i32::MAX;
+        let mut max_x = i32::MIN;
+        let mut min_y = i32::MAX;
+        let mut max_y = i32::MIN;
+        for pos in cells.keys() {
+            min_x = min_x.min(pos.x);
+            max_x = max_x.max(pos.x);
+            min_y = min_y.min(pos.y);
+            max_y = max_y.max(pos.y);
+        }
+
+        let mut board =
+            vec![vec![None; (max_x - min_x + 1) as usize]; (max_y - min_y + 1) as usize];
+        for (pos, cell) in cells {
+            let x = (pos.x - min_x) as usize;
+            let y = (pos.y - min_y) as usize;
+            board[y][x] = Some(*cell);
+        }
+
+        ThreeDBoard { board }
+    }
+
     pub fn step_back(&mut self) -> SimulationStepResult {
         // This is somewhat wrong, but it's clearer for the GUI
         if self.current_time > 0 {
