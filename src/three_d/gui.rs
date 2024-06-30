@@ -122,6 +122,7 @@ Enter: toggle edit mode
 
 Mouse actions:
   Left button: select a cell
+  T + Left button: set the clicked cell as selected time warp cell's target
   Left button + Shift: select multiple cells
   Right button: drag the viewport
   Drag with left button: move selected cells
@@ -174,16 +175,27 @@ Misc:
         }
 
         if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
-            state.selected_pos = state.screen_to_sim_coords(mouse_pos);
-            if let Some(group) = state.selection_group.as_ref() {
-                if !group.contains(&state.selected_pos) {
-                    state.selection_group = None;
+            if rh.is_key_down(KeyboardKey::KEY_T) {
+                if let Some(cell) = sim.cells().get(&state.selected_pos) {
+                    if *cell == Cell::TimeWarp {
+                        let new_pos = state.screen_to_sim_coords(mouse_pos);
+                        let diff = state.selected_pos - new_pos;
+                        sim.set_cell(state.selected_pos.left(), Cell::Data(diff.x as i64));
+                        sim.set_cell(state.selected_pos.right(), Cell::Data(diff.y as i64));
+                    }
                 }
-            }
-            if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) {
-                state.selection_rect = Some((mouse_pos, mouse_pos));
-            } else if sim.cells().contains_key(&state.selected_pos) {
-                state.drag_start = Some(mouse_pos);
+            } else {
+                state.selected_pos = state.screen_to_sim_coords(mouse_pos);
+                if let Some(group) = state.selection_group.as_ref() {
+                    if !group.contains(&state.selected_pos) {
+                        state.selection_group = None;
+                    }
+                }
+                if rh.is_key_down(KeyboardKey::KEY_LEFT_SHIFT) {
+                    state.selection_rect = Some((mouse_pos, mouse_pos));
+                } else if sim.cells().contains_key(&state.selected_pos) {
+                    state.drag_start = Some(mouse_pos);
+                }
             }
         } else if rh.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
             state.viewport_drag_point = Some(mouse_pos);
