@@ -324,8 +324,8 @@ impl ThreeDSimulator {
                                 actions.push(Action::TimeTravel(
                                     self.current_time - (dt.iter_u32_digits().next().unwrap_or(0)),
                                     *pos - Vector2D::new(
-                                        dx.iter_u64_digits().next().unwrap_or(0) as i32,
-                                        dy.iter_u64_digits().next().unwrap_or(0) as i32,
+                                        dx.try_into().unwrap(),
+                                        dy.try_into().unwrap(),
                                     ),
                                     v.clone(),
                                 ));
@@ -519,12 +519,7 @@ impl ThreeDSimulator {
                 self.current_cells.get(&pos.left()),
                 self.current_cells.get(&pos.right()),
             ) {
-                return Some(
-                    pos - Vector2D::new(
-                        dx.iter_u64_digits().next().unwrap_or(0) as i32,
-                        dy.iter_u64_digits().next().unwrap_or(0) as i32,
-                    ),
-                );
+                return Some(pos - Vector2D::new(dx.try_into().unwrap(), dy.try_into().unwrap()));
             }
         }
         None
