@@ -167,7 +167,7 @@ impl ThreeDSimulator {
         enum Action {
             Erase(Vector2D),
             Write(Vector2D, Cell),
-            TimeTravel(u32, Vector2D, BigInt),
+            TimeTravel(u32, Vector2D, Cell),
         }
         let mut actions = vec![];
 
@@ -199,88 +199,63 @@ impl ThreeDSimulator {
                     }
                 }
                 Cell::Add => {
-                    if let (Some(cell_x), Some(cell_y)) = (
+                    if let (Some(Cell::Data(x)), Some(Cell::Data(y))) = (
                         self.current_cells.get(&pos.left()),
                         self.current_cells.get(&pos.up()),
                     ) {
-                        match (cell_x, cell_y) {
-                            (Cell::Data(x), Cell::Data(y)) => {
-                                actions.push(Action::Erase(pos.left()));
-                                actions.push(Action::Erase(pos.up()));
-                                let res = Cell::Data(x + y);
-                                actions.push(Action::Write(pos.right(), res.clone()));
-                                actions.push(Action::Write(pos.down(), res));
-                            }
-                            _ => return self.error(*pos),
-                        }
+                        actions.push(Action::Erase(pos.left()));
+                        actions.push(Action::Erase(pos.up()));
+                        let res = Cell::Data(x + y);
+                        actions.push(Action::Write(pos.right(), res.clone()));
+                        actions.push(Action::Write(pos.down(), res));
                     }
                 }
                 Cell::Subtract => {
-                    if let (Some(cell_x), Some(cell_y)) = (
+                    if let (Some(Cell::Data(x)), Some(Cell::Data(y))) = (
                         self.current_cells.get(&pos.left()),
                         self.current_cells.get(&pos.up()),
                     ) {
-                        match (cell_x, cell_y) {
-                            (Cell::Data(x), Cell::Data(y)) => {
-                                actions.push(Action::Erase(pos.left()));
-                                actions.push(Action::Erase(pos.up()));
-                                let res = Cell::Data(x - y);
-                                actions.push(Action::Write(pos.right(), res.clone()));
-                                actions.push(Action::Write(pos.down(), res));
-                            }
-                            _ => return self.error(*pos),
-                        }
+                        actions.push(Action::Erase(pos.left()));
+                        actions.push(Action::Erase(pos.up()));
+                        let res = Cell::Data(x - y);
+                        actions.push(Action::Write(pos.right(), res.clone()));
+                        actions.push(Action::Write(pos.down(), res));
                     }
                 }
                 Cell::Multiply => {
-                    if let (Some(cell_x), Some(cell_y)) = (
+                    if let (Some(Cell::Data(x)), Some(Cell::Data(y))) = (
                         self.current_cells.get(&pos.left()),
                         self.current_cells.get(&pos.up()),
                     ) {
-                        match (cell_x, cell_y) {
-                            (Cell::Data(x), Cell::Data(y)) => {
-                                actions.push(Action::Erase(pos.left()));
-                                actions.push(Action::Erase(pos.up()));
-                                let res = Cell::Data(x * y);
-                                actions.push(Action::Write(pos.right(), res.clone()));
-                                actions.push(Action::Write(pos.down(), res));
-                            }
-                            _ => return self.error(*pos),
-                        }
+                        actions.push(Action::Erase(pos.left()));
+                        actions.push(Action::Erase(pos.up()));
+                        let res = Cell::Data(x * y);
+                        actions.push(Action::Write(pos.right(), res.clone()));
+                        actions.push(Action::Write(pos.down(), res));
                     }
                 }
                 Cell::Divide => {
-                    if let (Some(cell_x), Some(cell_y)) = (
+                    if let (Some(Cell::Data(x)), Some(Cell::Data(y))) = (
                         self.current_cells.get(&pos.left()),
                         self.current_cells.get(&pos.up()),
                     ) {
-                        match (cell_x, cell_y) {
-                            (Cell::Data(x), Cell::Data(y)) => {
-                                actions.push(Action::Erase(pos.left()));
-                                actions.push(Action::Erase(pos.up()));
-                                let res = Cell::Data(x / y);
-                                actions.push(Action::Write(pos.right(), res.clone()));
-                                actions.push(Action::Write(pos.down(), res));
-                            }
-                            _ => return self.error(*pos),
-                        }
+                        actions.push(Action::Erase(pos.left()));
+                        actions.push(Action::Erase(pos.up()));
+                        let res = Cell::Data(x / y);
+                        actions.push(Action::Write(pos.right(), res.clone()));
+                        actions.push(Action::Write(pos.down(), res));
                     }
                 }
                 Cell::Modulo => {
-                    if let (Some(cell_x), Some(cell_y)) = (
+                    if let (Some(Cell::Data(x)), Some(Cell::Data(y))) = (
                         self.current_cells.get(&pos.left()),
                         self.current_cells.get(&pos.up()),
                     ) {
-                        match (cell_x, cell_y) {
-                            (Cell::Data(x), Cell::Data(y)) => {
-                                actions.push(Action::Erase(pos.left()));
-                                actions.push(Action::Erase(pos.up()));
-                                let res = Cell::Data(x % y);
-                                actions.push(Action::Write(pos.right(), res.clone()));
-                                actions.push(Action::Write(pos.down(), res));
-                            }
-                            _ => return self.error(*pos),
-                        }
+                        actions.push(Action::Erase(pos.left()));
+                        actions.push(Action::Erase(pos.up()));
+                        let res = Cell::Data(x % y);
+                        actions.push(Action::Write(pos.right(), res.clone()));
+                        actions.push(Action::Write(pos.down(), res));
                     }
                 }
                 Cell::Equal => {
@@ -310,28 +285,25 @@ impl ThreeDSimulator {
                     }
                 }
                 Cell::TimeWarp => {
-                    if let (Some(cell_dx), Some(cell_dy), Some(cell_dt), Some(cell_v)) = (
+                    if let (
+                        Some(Cell::Data(dx)),
+                        Some(Cell::Data(dy)),
+                        Some(Cell::Data(dt)),
+                        Some(cell_v),
+                    ) = (
                         self.current_cells.get(&pos.left()),
                         self.current_cells.get(&pos.right()),
                         self.current_cells.get(&pos.down()),
                         self.current_cells.get(&pos.up()),
                     ) {
-                        match (cell_dx, cell_dy, cell_dt, cell_v) {
-                            (Cell::Data(dx), Cell::Data(dy), Cell::Data(dt), Cell::Data(v)) => {
-                                if *dt <= 0.into() {
-                                    return self.error(*pos);
-                                }
-                                actions.push(Action::TimeTravel(
-                                    self.current_time - (dt.iter_u32_digits().next().unwrap_or(0)),
-                                    *pos - Vector2D::new(
-                                        dx.try_into().unwrap(),
-                                        dy.try_into().unwrap(),
-                                    ),
-                                    v.clone(),
-                                ));
-                            }
-                            _ => return self.error(*pos),
+                        if *dt <= 0.into() {
+                            return self.error(*pos);
                         }
+                        actions.push(Action::TimeTravel(
+                            self.current_time - (dt.iter_u32_digits().next().unwrap_or(0)),
+                            *pos - Vector2D::new(dx.try_into().unwrap(), dy.try_into().unwrap()),
+                            cell_v.clone(),
+                        ));
                     }
                 }
                 Cell::Submit => {}
@@ -418,8 +390,8 @@ impl ThreeDSimulator {
             // Discard the current new state and fetch it from the history
             new_cells = self.history.pop().unwrap();
 
-            for (pos, value) in target_writes {
-                new_cells.insert(pos, Cell::Data(value));
+            for (pos, cell) in target_writes {
+                new_cells.insert(pos, cell);
             }
 
             self.current_cells = new_cells;
