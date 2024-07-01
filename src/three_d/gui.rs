@@ -676,14 +676,25 @@ fn render_sim(d: &mut RaylibDrawHandle, state: &GuiState, sim: &ThreeDSimulator)
                 colors::SOLARIZED_RED,
             );
         }
-        if let Some(target) = sim.time_warp_target(state.selected_pos) {
-            d.draw_rectangle_lines(
-                state.viewport_offset.x + target.x * CELL_SIZE,
-                state.viewport_offset.y + target.y * CELL_SIZE + 1,
-                CELL_SIZE - 1,
-                CELL_SIZE - 1,
-                colors::SOLARIZED_CYAN,
-            );
+        for pos in sim.cells().keys() {
+            if let Some(target) = sim.time_warp_target(*pos) {
+                if d.is_key_down(KeyboardKey::KEY_T) {
+                    d.draw_line(
+                        state.viewport_offset.x + pos.x * CELL_SIZE + CELL_SIZE / 2,
+                        state.viewport_offset.y + pos.y * CELL_SIZE + CELL_SIZE / 2,
+                        state.viewport_offset.x + target.x * CELL_SIZE + CELL_SIZE / 2,
+                        state.viewport_offset.y + target.y * CELL_SIZE + CELL_SIZE / 2,
+                        colors::SOLARIZED_CYAN,
+                    );
+                }
+                d.draw_rectangle_lines(
+                    state.viewport_offset.x + target.x * CELL_SIZE,
+                    state.viewport_offset.y + target.y * CELL_SIZE + 1,
+                    CELL_SIZE - 1,
+                    CELL_SIZE - 1,
+                    colors::SOLARIZED_CYAN,
+                );
+            }
         }
     }
 
