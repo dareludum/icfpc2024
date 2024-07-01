@@ -11,6 +11,10 @@ impl ThreeDBoard {
     pub fn load(s: &str) -> Self {
         let mut board = Vec::new();
         for line in s.lines() {
+            // Allow loading full solutions
+            if line.starts_with("solve ") {
+                continue;
+            }
             let mut row = vec![];
             for cell in line.split_ascii_whitespace() {
                 match cell {
